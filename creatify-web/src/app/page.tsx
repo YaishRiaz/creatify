@@ -10,6 +10,7 @@ import {
   Users,
   Smartphone,
   DollarSign,
+  FileText,
 } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
@@ -128,18 +129,21 @@ function HowItWorks() {
   const brandSteps = [
     {
       n: "01",
-      title: "Fund a campaign",
-      desc: "Set a total budget, payout rate per 1K views, and an optional per-creator cap.",
+      icon: <FileText size={18} />,
+      title: "Set Up Your Campaign",
+      desc: "Write your brief, set your budget, define your payout rate per 1,000 views. Takes 5 minutes.",
     },
     {
       n: "02",
-      title: "Set your brief",
-      desc: "Define what to post, what to avoid, hashtags, and target platforms.",
+      icon: <Users size={18} />,
+      title: "Creators Do the Work",
+      desc: "Hundreds of real people post authentic content about your brand on TikTok, Instagram, YouTube and Facebook.",
     },
     {
       n: "03",
-      title: "Watch it run",
-      desc: "Creators post, views roll in, and earnings auto-distribute from escrow.",
+      icon: <TrendingUp size={18} />,
+      title: "Pay Per View Delivered",
+      desc: "Your budget releases automatically as views come in. Campaign ends when budget is spent or deadline hits.",
     },
   ];
 
@@ -182,9 +186,12 @@ function HowItWorks() {
             <div className="flex flex-col gap-8">
               {brandSteps.map((step) => (
                 <div key={step.n} className="flex gap-5">
-                  <span className="font-mono text-xs text-[#6C47FF] font-bold mt-1 shrink-0">
-                    {step.n}
-                  </span>
+                  <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5">
+                    <span className="text-[#6C47FF]">{step.icon}</span>
+                    <span className="font-mono text-[10px] text-zinc-700 font-bold">
+                      {step.n}
+                    </span>
+                  </div>
                   <div>
                     <p className="font-heading font-semibold text-white mb-1">
                       {step.title}
