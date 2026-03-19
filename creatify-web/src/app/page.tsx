@@ -8,9 +8,9 @@ import {
   ShieldCheck,
   Sliders,
   Users,
-  Smartphone,
-  DollarSign,
   FileText,
+  Search,
+  Video,
 } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
@@ -123,7 +123,7 @@ function NumbersBar() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 3 — HOW IT WORKS
+   SECTION 3 — HOW IT WORKS: BRANDS
 ───────────────────────────────────────────── */
 function HowItWorks() {
   const brandSteps = [
@@ -147,104 +147,156 @@ function HowItWorks() {
     },
   ];
 
+  return (
+    <section id="how-it-works" className="py-24 md:py-32 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-12">
+          <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
+            For Brands
+          </p>
+          <h2 className="font-heading font-bold text-3xl md:text-5xl text-white leading-tight">
+            Launch a campaign in minutes.
+          </h2>
+        </div>
+
+        <div className="bg-[#111111] border border-zinc-800 p-8 md:p-12">
+          <div className="flex flex-col gap-8">
+            {brandSteps.map((step) => (
+              <div key={step.n} className="flex gap-5">
+                <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5">
+                  <span className="text-[#6C47FF]">{step.icon}</span>
+                  <span className="font-mono text-[10px] text-zinc-700 font-bold">
+                    {step.n}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-heading font-semibold text-white mb-1">
+                    {step.title}
+                  </p>
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                    {step.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 pt-8 border-t border-zinc-800">
+            <Link
+              href="/auth/signup?role=brand"
+              className="inline-flex items-center gap-2 text-sm text-[#6C47FF] hover:text-white transition-colors"
+            >
+              Launch a campaign <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SECTION 4 — HOW IT WORKS: CREATORS
+───────────────────────────────────────────── */
+function HowItWorksCreators() {
   const creatorSteps = [
     {
       n: "01",
-      title: "Browse open campaigns",
-      desc: "No follower minimum. If you have a public account, you can apply.",
+      icon: <Search size={18} />,
+      title: "Browse Live Campaigns",
+      desc: "See what brands are paying right now. Filter by platform and payout rate.",
     },
     {
       n: "02",
-      title: "Post on your platform",
-      desc: "Create content following the brief on TikTok, Instagram, YouTube, or Facebook.",
+      icon: <Video size={18} />,
+      title: "Post Your Content",
+      desc: "Follow the brief, post on your own account. Your style, your voice — that's the point.",
     },
     {
       n: "03",
-      title: "Submit and get paid",
-      desc: "Drop your post URL. We track views automatically. Earnings hit your wallet in real time.",
+      icon: <Wallet size={18} />,
+      title: "Watch Your Wallet Fill Up",
+      desc: "Submit your post URL. We track views every 6 hours and your wallet updates in real time.",
     },
   ];
 
   return (
-    <section id="how-it-works" className="py-24 md:py-32 px-4">
+    <section id="for-creators" className="py-24 md:py-32 px-4 bg-[#0D0D0D]">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-16">
-          <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
-            How it works
+        <div className="mb-12">
+          <p className="text-xs text-[#00E5A0] uppercase tracking-widest font-semibold mb-3">
+            For Creators
           </p>
-          <h2 className="font-heading font-bold text-3xl md:text-5xl text-white leading-tight">
-            Two sides. One platform.
+          <h2 className="font-heading font-bold text-3xl md:text-4xl text-white leading-tight">
+            Post once. Earn while you sleep.
           </h2>
+          <p className="mt-4 text-zinc-400 max-w-xl leading-relaxed">
+            No pitch emails. No negotiations. Browse tasks, post, submit your
+            URL, get paid.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-          {/* Brands column */}
-          <div className="bg-[#111111] border border-zinc-800 p-8 md:p-10">
-            <p className="text-xs text-zinc-500 uppercase tracking-widest mb-8">
-              For Brands
-            </p>
-            <div className="flex flex-col gap-8">
-              {brandSteps.map((step) => (
-                <div key={step.n} className="flex gap-5">
-                  <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5">
-                    <span className="text-[#6C47FF]">{step.icon}</span>
-                    <span className="font-mono text-[10px] text-zinc-700 font-bold">
-                      {step.n}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-heading font-semibold text-white mb-1">
-                      {step.title}
-                    </p>
-                    <p className="text-sm text-zinc-500 leading-relaxed">
-                      {step.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-10">
-              <Link
-                href="/auth/signup?role=brand"
-                className="inline-flex items-center gap-2 text-sm text-[#6C47FF] hover:text-white transition-colors"
-              >
-                Launch a campaign <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Creators column */}
-          <div className="bg-[#111111] border border-zinc-800 p-8 md:p-10">
-            <p className="text-xs text-zinc-500 uppercase tracking-widest mb-8">
-              For Creators
-            </p>
-            <div className="flex flex-col gap-8">
-              {creatorSteps.map((step) => (
-                <div key={step.n} className="flex gap-5">
-                  <span className="font-mono text-xs text-[#00E5A0] font-bold mt-1 shrink-0">
+        <div className="bg-[#111111] border border-[#00E5A0]/20 p-8 md:p-12">
+          <div className="flex flex-col gap-8">
+            {creatorSteps.map((step) => (
+              <div key={step.n} className="flex gap-5">
+                <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5">
+                  <span className="text-[#00E5A0]">{step.icon}</span>
+                  <span className="font-mono text-[10px] text-zinc-700 font-bold">
                     {step.n}
                   </span>
-                  <div>
-                    <p className="font-heading font-semibold text-white mb-1">
-                      {step.title}
-                    </p>
-                    <p className="text-sm text-zinc-500 leading-relaxed">
-                      {step.desc}
-                    </p>
-                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="mt-10">
-              <Link
-                href="/auth/signup?role=creator"
-                className="inline-flex items-center gap-2 text-sm text-[#00E5A0] hover:text-white transition-colors"
-              >
-                Start earning <ArrowRight size={14} />
-              </Link>
-            </div>
+                <div>
+                  <p className="font-heading font-semibold text-white mb-1">
+                    {step.title}
+                  </p>
+                  <p className="text-sm text-zinc-500 leading-relaxed">
+                    {step.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 pt-8 border-t border-zinc-800">
+            <Link
+              href="/auth/signup?role=creator"
+              className="inline-flex items-center gap-2 text-sm text-[#00E5A0] hover:text-white transition-colors"
+            >
+              Start earning <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SECTION 5 — THE DIFFERENCE
+───────────────────────────────────────────── */
+function TheDifference() {
+  return (
+    <section className="relative py-28 md:py-40 px-4 overflow-hidden">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(108,71,255,0.11) 0%, transparent 70%)",
+        }}
+      />
+      <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-8 text-center">
+        <p className="font-heading font-black text-3xl md:text-5xl text-white leading-tight">
+          &ldquo;A student with 300 followers earns the exact same rate as
+          someone with 300,000.&rdquo;
+        </p>
+        <p className="text-zinc-400 text-lg max-w-lg leading-relaxed">
+          Views are views. We measure what actually happened, not who you are.
+        </p>
+        <Link
+          href="/auth/signup"
+          className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200"
+        >
+          Create Free Account
+        </Link>
       </div>
     </section>
   );
@@ -314,77 +366,6 @@ function ForBrands() {
             className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-7 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors"
           >
             Launch your first campaign <ArrowRight size={15} />
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   SECTION 5 — FOR CREATORS
-───────────────────────────────────────────── */
-function ForCreators() {
-  const features = [
-    {
-      icon: <Users size={20} />,
-      title: "Zero follower minimum",
-      desc: "If you have a public social account and a phone, you qualify. Full stop.",
-    },
-    {
-      icon: <DollarSign size={20} />,
-      title: "Cash out from LKR 500",
-      desc: "No waiting until you hit big numbers. Withdraw once your wallet hits the minimum.",
-    },
-    {
-      icon: <Zap size={20} />,
-      title: "Earnings update in real time",
-      desc: "Watch your views and balance tick up as your content performs. No monthly surprises.",
-    },
-    {
-      icon: <Smartphone size={20} />,
-      title: "Post on your existing accounts",
-      desc: "TikTok, Instagram, YouTube, Facebook — no new accounts, no new platforms.",
-    },
-  ];
-
-  return (
-    <section id="for-creators" className="py-24 md:py-32 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-14">
-          <p className="text-xs text-[#00E5A0] uppercase tracking-widest font-semibold mb-3">
-            For Creators
-          </p>
-          <h2 className="font-heading font-bold text-3xl md:text-5xl text-white leading-tight max-w-xl">
-            Your content is already
-            <br />
-            worth money.
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {features.map((f) => (
-            <div
-              key={f.title}
-              className="bg-[#111111] border border-zinc-800 rounded-none p-7 flex flex-col gap-4"
-            >
-              <span className="text-[#00E5A0]">{f.icon}</span>
-              <div>
-                <p className="font-heading font-semibold text-white mb-2">
-                  {f.title}
-                </p>
-                <p className="text-sm text-zinc-500 leading-relaxed">{f.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10">
-          <Link
-            href="/auth/signup?role=creator"
-            className="inline-flex items-center gap-2 border border-zinc-600 text-white px-7 py-4 text-sm font-semibold rounded-none hover:border-white transition-colors"
-          >
-            Create a free account <ArrowRight size={15} />
           </Link>
         </div>
       </div>
@@ -512,8 +493,9 @@ export default function HomePage() {
         <Hero />
         <NumbersBar />
         <HowItWorks />
+        <HowItWorksCreators />
+        <TheDifference />
         <ForBrands />
-        <ForCreators />
         <EarningsIllustration />
         <FinalCTA />
       </main>
