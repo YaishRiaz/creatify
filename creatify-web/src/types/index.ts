@@ -103,8 +103,19 @@ export interface Notification {
   id: string
   user_id: string
   title: string
-  body?: string
-  type?: string
+  message: string
   is_read: boolean
+  type?: string
+  link?: string
   created_at: string
+}
+
+export interface AuthFormData {
+  email: string
+  password: string
+  full_name?: string
+  phone?: string
+  role?: UserRole
+  company_name?: string
+  nic_number?: string
 }
