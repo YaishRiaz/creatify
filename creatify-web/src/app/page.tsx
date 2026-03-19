@@ -7,7 +7,6 @@ import {
   ArrowRight,
   TrendingUp,
   ShieldCheck,
-  Sliders,
   Users,
   FileText,
   Search,
@@ -167,37 +166,36 @@ function HowItWorks() {
           </h2>
         </div>
 
-        <div className="bg-[#111111] border border-zinc-800 p-8 md:p-12">
-          <div className="flex flex-col gap-8">
-            {brandSteps.map((step) => (
-              <div key={step.n} className="flex gap-5">
-                <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5">
-                  <span className="text-[#6C47FF]">{step.icon}</span>
-                  <span className="font-mono text-[10px] text-zinc-700 font-bold">
-                    {step.n}
-                  </span>
-                </div>
-                <div>
-                  <p
-                    className={`${syne.className} font-bold text-white mb-1`}
-                  >
-                    {step.title}
-                  </p>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
-                    {step.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 pt-8 border-t border-zinc-800">
-            <Link
-              href="/auth/signup?role=brand"
-              className="inline-flex items-center gap-2 text-sm text-[#6C47FF] hover:text-white transition-colors min-h-[44px]"
+        <div className="flex flex-col gap-4">
+          {brandSteps.map((step) => (
+            <div
+              key={step.n}
+              className="bg-[#111111] border border-zinc-800 border-l-4 border-l-[#6C47FF] p-8 flex gap-5"
             >
-              Launch a campaign <ArrowRight size={14} />
-            </Link>
-          </div>
+              <div className="shrink-0 pt-0.5">
+                <span className="text-[#6C47FF]">{step.icon}</span>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
+                  Step {step.n}
+                </p>
+                <p className={`${syne.className} font-bold text-white mb-2`}>
+                  {step.title}
+                </p>
+                <p className="text-sm text-zinc-400 leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8">
+          <Link
+            href="/auth/signup?role=brand"
+            className="inline-flex items-center gap-2 text-sm text-[#6C47FF] hover:text-white transition-colors min-h-[44px]"
+          >
+            Launch a campaign <ArrowRight size={14} />
+          </Link>
         </div>
       </div>
     </section>
@@ -247,37 +245,36 @@ function HowItWorksCreators() {
           </p>
         </div>
 
-        <div className="bg-[#111111] border border-[#00E5A0]/20 p-8 md:p-12">
-          <div className="flex flex-col gap-8">
-            {creatorSteps.map((step) => (
-              <div key={step.n} className="flex gap-5">
-                <div className="shrink-0 flex flex-col items-center gap-1.5 pt-0.5">
-                  <span className="text-[#00E5A0]">{step.icon}</span>
-                  <span className="font-mono text-[10px] text-zinc-700 font-bold">
-                    {step.n}
-                  </span>
-                </div>
-                <div>
-                  <p
-                    className={`${syne.className} font-bold text-white mb-1`}
-                  >
-                    {step.title}
-                  </p>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
-                    {step.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 pt-8 border-t border-zinc-800">
-            <Link
-              href="/auth/signup?role=creator"
-              className="inline-flex items-center gap-2 text-sm text-[#00E5A0] hover:text-white transition-colors min-h-[44px]"
+        <div className="flex flex-col gap-4">
+          {creatorSteps.map((step) => (
+            <div
+              key={step.n}
+              className="bg-[#111111] border border-zinc-800 border-l-4 border-l-[#00E5A0] p-8 flex gap-5"
             >
-              Start earning <ArrowRight size={14} />
-            </Link>
-          </div>
+              <div className="shrink-0 pt-0.5">
+                <span className="text-[#00E5A0]">{step.icon}</span>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
+                  Step {step.n}
+                </p>
+                <p className={`${syne.className} font-bold text-white mb-2`}>
+                  {step.title}
+                </p>
+                <p className="text-sm text-zinc-400 leading-relaxed">
+                  {step.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8">
+          <Link
+            href="/auth/signup?role=creator"
+            className="inline-flex items-center gap-2 text-sm text-[#00E5A0] hover:text-white transition-colors min-h-[44px]"
+          >
+            Start earning <ArrowRight size={14} />
+          </Link>
         </div>
       </div>
     </section>
@@ -320,80 +317,7 @@ function TheDifference() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 6 — FOR BRANDS
-───────────────────────────────────────────── */
-function ForBrands() {
-  const features = [
-    {
-      icon: <TrendingUp size={20} />,
-      title: "Pay only for real views",
-      desc: "Your budget moves only when views are verified. No impression fraud, no guesswork.",
-    },
-    {
-      icon: <Sliders size={20} />,
-      title: "Full control over spend",
-      desc: "Set payout rate per 1K views, per-creator caps, and platform targets. You define the ceiling.",
-    },
-    {
-      icon: <ShieldCheck size={20} />,
-      title: "Fraud detection built in",
-      desc: "Every submission is scored. Suspicious view spikes get flagged before your budget touches them.",
-    },
-    {
-      icon: <Users size={20} />,
-      title: "Scale with real creators",
-      desc: "Dozens of micro-creators driving authentic reach beats one influencer deal every time.",
-    },
-  ];
-
-  return (
-    <section id="for-brands" className="py-24 md:py-32 px-4 bg-[#0D0D0D]">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-14">
-          <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
-            For Brands
-          </p>
-          <h2
-            className={`${syne.className} font-bold text-3xl md:text-5xl text-white leading-tight max-w-xl`}
-          >
-            Performance advertising,
-            <br />
-            finally honest.
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {features.map((f) => (
-            <div
-              key={f.title}
-              className="bg-[#111111] border border-zinc-800 rounded-lg p-7 flex flex-col gap-4"
-            >
-              <span className="text-[#6C47FF]">{f.icon}</span>
-              <div>
-                <p className={`${syne.className} font-bold text-white mb-2`}>
-                  {f.title}
-                </p>
-                <p className="text-sm text-zinc-400 leading-relaxed">{f.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10">
-          <Link
-            href="/auth/signup?role=brand"
-            className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-7 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors min-h-[44px]"
-          >
-            Launch your first campaign <ArrowRight size={15} />
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   SECTION 7 — FEATURE GRID
+   SECTION 6 — FEATURE GRID
 ───────────────────────────────────────────── */
 function FeatureGrid() {
   const cards = [
@@ -516,120 +440,6 @@ function DualCTAStrip() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 9 — EARNINGS ILLUSTRATION
-───────────────────────────────────────────── */
-function EarningsIllustration() {
-  return (
-    <section className="py-24 md:py-32 px-4 bg-[#0D0D0D]">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-12">
-          <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold mb-3">
-            The math
-          </p>
-          <h2
-            className={`${syne.className} font-bold text-3xl md:text-5xl text-white leading-tight`}
-          >
-            Simple. Transparent.
-            <br />
-            Yours.
-          </h2>
-        </div>
-
-        <div className="bg-[#111111] border border-zinc-800 p-8 md:p-12">
-          <p className="text-xs text-zinc-500 uppercase tracking-widest mb-8">
-            Example campaign
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-0 md:divide-x md:divide-zinc-800">
-            <div className="md:pr-10 flex flex-col gap-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">
-                Payout rate
-              </p>
-              <p className="font-mono text-3xl font-bold text-white">
-                LKR 3.00
-              </p>
-              <p className="text-xs text-zinc-500">per 1,000 views</p>
-            </div>
-
-            <div className="md:px-10 flex flex-col gap-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">
-                Your video gets
-              </p>
-              <p className="font-mono text-3xl font-bold text-white">
-                150,000
-              </p>
-              <p className="text-xs text-zinc-500">verified views</p>
-            </div>
-
-            <div className="md:pl-10 flex flex-col gap-2">
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">
-                You earn
-              </p>
-              <p className="font-mono text-3xl font-bold text-[#00E5A0]">
-                LKR 450
-              </p>
-              <p className="text-xs text-zinc-500">from one post</p>
-            </div>
-          </div>
-
-          <div className="mt-10 pt-8 border-t border-zinc-800">
-            <p className="text-sm text-zinc-400">
-              Post on multiple active campaigns simultaneously to multiply your
-              earnings. No cap on how many campaigns you can join.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   SECTION 10 — FINAL CTA
-───────────────────────────────────────────── */
-function FinalCTA() {
-  return (
-    <section className="py-24 md:py-36 px-4 relative overflow-hidden">
-      {/* Radial glow — exception: complex gradient */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 50% 60% at 50% 100%, rgba(108,71,255,0.10) 0%, transparent 70%)",
-        }}
-      />
-      <div className="relative z-10 max-w-3xl mx-auto text-center flex flex-col items-center gap-8">
-        <h2
-          className={`${syne.className} font-extrabold text-4xl md:text-6xl text-white leading-none tracking-tight`}
-        >
-          Ready to make
-          <br />
-          content pay?
-        </h2>
-        <p className={`${dmSans.className} text-zinc-400 text-lg max-w-md leading-relaxed`}>
-          Join hundreds of creators already earning and brands already scaling
-          on Creatify.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            href="/auth/signup?role=brand"
-            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors min-h-[44px] flex items-center justify-center"
-          >
-            I&apos;m a Brand
-          </Link>
-          <Link
-            href="/auth/signup?role=creator"
-            className="border border-zinc-600 text-white px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors min-h-[44px] flex items-center justify-center"
-          >
-            I&apos;m a Creator
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────
    PAGE
 ───────────────────────────────────────────── */
 export default function HomePage() {
@@ -642,11 +452,8 @@ export default function HomePage() {
         <HowItWorks />
         <HowItWorksCreators />
         <TheDifference />
-        <ForBrands />
         <FeatureGrid />
         <DualCTAStrip />
-        <EarningsIllustration />
-        <FinalCTA />
       </main>
       <Footer />
     </>
