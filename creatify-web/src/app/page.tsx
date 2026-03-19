@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Syne, DM_Sans } from "next/font/google";
 import {
   Zap,
   Wallet,
@@ -15,13 +16,16 @@ import {
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 
+const syne = Syne({ subsets: ["latin"], weight: ["700", "800"] });
+const dmSans = DM_Sans({ subsets: ["latin"] });
+
 /* ─────────────────────────────────────────────
    SECTION 1 — HERO
 ───────────────────────────────────────────── */
 function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
-      {/* Radial glow */}
+      {/* Radial glow — exception: complex gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -38,28 +42,30 @@ function Hero() {
         </div>
 
         {/* Headline */}
-        <div className="font-heading font-black text-5xl md:text-7xl leading-none tracking-tight text-white">
+        <div
+          className={`${syne.className} font-extrabold text-5xl md:text-7xl leading-none tracking-tight text-white`}
+        >
           <div>Post Content.</div>
           <div className="pl-4 md:pl-8 mt-1">Get Paid Per View.</div>
         </div>
 
         {/* Subheadline */}
-        <p className="text-lg text-zinc-400 max-w-xl leading-relaxed">
-          Brands get authentic reach. Creators earn real money.
-          No follower minimum. No agency. No waiting.
+        <p className={`${dmSans.className} text-lg text-zinc-300 max-w-xl leading-relaxed`}>
+          Brands get authentic reach. Creators earn real money. No follower
+          minimum. No agency. No waiting.
         </p>
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-3">
           <Link
             href="/auth/signup?role=brand"
-            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200"
+            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[44px] flex items-center justify-center"
           >
             Launch a Campaign
           </Link>
           <Link
             href="/auth/signup?role=creator"
-            className="border border-zinc-600 text-white px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors duration-200"
+            className="border border-zinc-600 text-white px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors duration-200 min-h-[44px] flex items-center justify-center"
           >
             Start Earning
           </Link>
@@ -77,9 +83,9 @@ function Hero() {
           ].map(({ icon, text }) => (
             <div
               key={text}
-              className="flex items-center gap-2 bg-[#111111] border border-zinc-800 px-4 py-2.5 text-xs text-zinc-400 rounded-lg"
+              className="flex items-center gap-2 bg-[#111111] border border-zinc-800 px-4 py-3 text-sm text-zinc-300 rounded-lg"
             >
-              <span className="text-zinc-500">{icon}</span>
+              <span className="text-zinc-500 shrink-0">{icon}</span>
               {text}
             </div>
           ))}
@@ -154,7 +160,9 @@ function HowItWorks() {
           <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
             For Brands
           </p>
-          <h2 className="font-heading font-bold text-3xl md:text-5xl text-white leading-tight">
+          <h2
+            className={`${syne.className} font-bold text-3xl md:text-5xl text-white leading-tight`}
+          >
             Launch a campaign in minutes.
           </h2>
         </div>
@@ -170,10 +178,12 @@ function HowItWorks() {
                   </span>
                 </div>
                 <div>
-                  <p className="font-heading font-semibold text-white mb-1">
+                  <p
+                    className={`${syne.className} font-bold text-white mb-1`}
+                  >
                     {step.title}
                   </p>
-                  <p className="text-sm text-zinc-500 leading-relaxed">
+                  <p className="text-sm text-zinc-400 leading-relaxed">
                     {step.desc}
                   </p>
                 </div>
@@ -183,7 +193,7 @@ function HowItWorks() {
           <div className="mt-10 pt-8 border-t border-zinc-800">
             <Link
               href="/auth/signup?role=brand"
-              className="inline-flex items-center gap-2 text-sm text-[#6C47FF] hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[#6C47FF] hover:text-white transition-colors min-h-[44px]"
             >
               Launch a campaign <ArrowRight size={14} />
             </Link>
@@ -226,10 +236,12 @@ function HowItWorksCreators() {
           <p className="text-xs text-[#00E5A0] uppercase tracking-widest font-semibold mb-3">
             For Creators
           </p>
-          <h2 className="font-heading font-bold text-3xl md:text-4xl text-white leading-tight">
+          <h2
+            className={`${syne.className} font-bold text-3xl md:text-4xl text-white leading-tight`}
+          >
             Post once. Earn while you sleep.
           </h2>
-          <p className="mt-4 text-zinc-400 max-w-xl leading-relaxed">
+          <p className={`${dmSans.className} mt-4 text-zinc-400 max-w-xl leading-relaxed`}>
             No pitch emails. No negotiations. Browse tasks, post, submit your
             URL, get paid.
           </p>
@@ -246,10 +258,12 @@ function HowItWorksCreators() {
                   </span>
                 </div>
                 <div>
-                  <p className="font-heading font-semibold text-white mb-1">
+                  <p
+                    className={`${syne.className} font-bold text-white mb-1`}
+                  >
                     {step.title}
                   </p>
-                  <p className="text-sm text-zinc-500 leading-relaxed">
+                  <p className="text-sm text-zinc-400 leading-relaxed">
                     {step.desc}
                   </p>
                 </div>
@@ -259,7 +273,7 @@ function HowItWorksCreators() {
           <div className="mt-10 pt-8 border-t border-zinc-800">
             <Link
               href="/auth/signup?role=creator"
-              className="inline-flex items-center gap-2 text-sm text-[#00E5A0] hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-[#00E5A0] hover:text-white transition-colors min-h-[44px]"
             >
               Start earning <ArrowRight size={14} />
             </Link>
@@ -276,6 +290,7 @@ function HowItWorksCreators() {
 function TheDifference() {
   return (
     <section className="relative py-28 md:py-40 px-4 overflow-hidden">
+      {/* Radial glow — exception: complex gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -284,16 +299,18 @@ function TheDifference() {
         }}
       />
       <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-8 text-center">
-        <p className="font-heading font-black text-3xl md:text-5xl text-white leading-tight">
+        <p
+          className={`${syne.className} font-extrabold text-3xl md:text-5xl text-white leading-tight`}
+        >
           &ldquo;A student with 300 followers earns the exact same rate as
           someone with 300,000.&rdquo;
         </p>
-        <p className="text-zinc-400 text-lg max-w-lg leading-relaxed">
+        <p className={`${dmSans.className} text-zinc-400 text-lg max-w-lg leading-relaxed`}>
           Views are views. We measure what actually happened, not who you are.
         </p>
         <Link
           href="/auth/signup"
-          className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200"
+          className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[44px] flex items-center"
         >
           Create Free Account
         </Link>
@@ -303,7 +320,7 @@ function TheDifference() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 4 — FOR BRANDS
+   SECTION 6 — FOR BRANDS
 ───────────────────────────────────────────── */
 function ForBrands() {
   const features = [
@@ -336,7 +353,9 @@ function ForBrands() {
           <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
             For Brands
           </p>
-          <h2 className="font-heading font-bold text-3xl md:text-5xl text-white leading-tight max-w-xl">
+          <h2
+            className={`${syne.className} font-bold text-3xl md:text-5xl text-white leading-tight max-w-xl`}
+          >
             Performance advertising,
             <br />
             finally honest.
@@ -351,10 +370,10 @@ function ForBrands() {
             >
               <span className="text-[#6C47FF]">{f.icon}</span>
               <div>
-                <p className="font-heading font-semibold text-white mb-2">
+                <p className={`${syne.className} font-bold text-white mb-2`}>
                   {f.title}
                 </p>
-                <p className="text-sm text-zinc-500 leading-relaxed">{f.desc}</p>
+                <p className="text-sm text-zinc-400 leading-relaxed">{f.desc}</p>
               </div>
             </div>
           ))}
@@ -363,7 +382,7 @@ function ForBrands() {
         <div className="mt-10">
           <Link
             href="/auth/signup?role=brand"
-            className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-7 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors"
+            className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-7 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors min-h-[44px]"
           >
             Launch your first campaign <ArrowRight size={15} />
           </Link>
@@ -374,7 +393,7 @@ function ForBrands() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 6 — FEATURE GRID
+   SECTION 7 — FEATURE GRID
 ───────────────────────────────────────────── */
 function FeatureGrid() {
   const cards = [
@@ -401,13 +420,15 @@ function FeatureGrid() {
   ];
 
   return (
-    <section className="py-24 md:py-32 px-4 bg-[#0D0D0D]">
+    <section className="py-24 md:py-32 px-4 bg-[#0A0A0A]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
           <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
             Why Creatify
           </p>
-          <h2 className="font-heading font-bold text-3xl md:text-4xl text-white leading-tight">
+          <h2
+            className={`${syne.className} font-bold text-3xl md:text-4xl text-white leading-tight`}
+          >
             Built different.
           </h2>
         </div>
@@ -420,10 +441,10 @@ function FeatureGrid() {
             >
               <span className="text-[#6C47FF]">{card.icon}</span>
               <div>
-                <p className="font-heading font-semibold text-white mb-2">
+                <p className={`${syne.className} font-bold text-white mb-2`}>
                   {card.title}
                 </p>
-                <p className="text-sm text-zinc-500 leading-relaxed">
+                <p className="text-sm text-zinc-400 leading-relaxed">
                   {card.body}
                 </p>
               </div>
@@ -436,7 +457,7 @@ function FeatureGrid() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 7 — DUAL CTA STRIP
+   SECTION 8 — DUAL CTA STRIP
 ───────────────────────────────────────────── */
 function DualCTAStrip() {
   return (
@@ -447,7 +468,9 @@ function DualCTAStrip() {
           <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold">
             For Brands
           </p>
-          <h3 className="font-heading font-bold text-2xl md:text-3xl text-white leading-tight">
+          <h3
+            className={`${syne.className} font-bold text-2xl md:text-3xl text-white leading-tight`}
+          >
             Real reach. Zero waste.
           </h3>
           <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
@@ -457,7 +480,7 @@ function DualCTAStrip() {
           <div>
             <Link
               href="/auth/signup?role=brand"
-              className="inline-block bg-[#6C47FF] text-white px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200"
+              className="inline-flex items-center bg-[#6C47FF] text-white px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[44px]"
             >
               Launch a Campaign
             </Link>
@@ -469,7 +492,9 @@ function DualCTAStrip() {
           <p className="text-xs text-[#00E5A0] uppercase tracking-widest font-semibold">
             For Creators
           </p>
-          <h3 className="font-heading font-bold text-2xl md:text-3xl text-white leading-tight">
+          <h3
+            className={`${syne.className} font-bold text-2xl md:text-3xl text-white leading-tight`}
+          >
             Your phone is a paycheck.
           </h3>
           <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
@@ -479,7 +504,7 @@ function DualCTAStrip() {
           <div>
             <Link
               href="/auth/signup?role=creator"
-              className="inline-block border border-[#00E5A0] text-[#00E5A0] px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#00E5A0] hover:text-black transition-all duration-200"
+              className="inline-flex items-center border border-[#00E5A0] text-[#00E5A0] px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#00E5A0] hover:text-black transition-all duration-200 min-h-[44px]"
             >
               Start Earning Free
             </Link>
@@ -491,7 +516,7 @@ function DualCTAStrip() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 8 — EARNINGS ILLUSTRATION
+   SECTION 9 — EARNINGS ILLUSTRATION
 ───────────────────────────────────────────── */
 function EarningsIllustration() {
   return (
@@ -501,7 +526,9 @@ function EarningsIllustration() {
           <p className="text-xs text-zinc-500 uppercase tracking-widest font-semibold mb-3">
             The math
           </p>
-          <h2 className="font-heading font-bold text-3xl md:text-5xl text-white leading-tight">
+          <h2
+            className={`${syne.className} font-bold text-3xl md:text-5xl text-white leading-tight`}
+          >
             Simple. Transparent.
             <br />
             Yours.
@@ -509,7 +536,7 @@ function EarningsIllustration() {
         </div>
 
         <div className="bg-[#111111] border border-zinc-800 p-8 md:p-12">
-          <p className="text-xs text-zinc-600 uppercase tracking-widest mb-8">
+          <p className="text-xs text-zinc-500 uppercase tracking-widest mb-8">
             Example campaign
           </p>
 
@@ -521,7 +548,7 @@ function EarningsIllustration() {
               <p className="font-mono text-3xl font-bold text-white">
                 LKR 3.00
               </p>
-              <p className="text-xs text-zinc-600">per 1,000 views</p>
+              <p className="text-xs text-zinc-500">per 1,000 views</p>
             </div>
 
             <div className="md:px-10 flex flex-col gap-2">
@@ -531,7 +558,7 @@ function EarningsIllustration() {
               <p className="font-mono text-3xl font-bold text-white">
                 150,000
               </p>
-              <p className="text-xs text-zinc-600">verified views</p>
+              <p className="text-xs text-zinc-500">verified views</p>
             </div>
 
             <div className="md:pl-10 flex flex-col gap-2">
@@ -541,14 +568,14 @@ function EarningsIllustration() {
               <p className="font-mono text-3xl font-bold text-[#00E5A0]">
                 LKR 450
               </p>
-              <p className="text-xs text-zinc-600">from one post</p>
+              <p className="text-xs text-zinc-500">from one post</p>
             </div>
           </div>
 
           <div className="mt-10 pt-8 border-t border-zinc-800">
-            <p className="text-sm text-zinc-500">
-              Post on multiple active campaigns simultaneously to multiply
-              your earnings. No cap on how many campaigns you can join.
+            <p className="text-sm text-zinc-400">
+              Post on multiple active campaigns simultaneously to multiply your
+              earnings. No cap on how many campaigns you can join.
             </p>
           </div>
         </div>
@@ -558,11 +585,12 @@ function EarningsIllustration() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 7 — FINAL CTA
+   SECTION 10 — FINAL CTA
 ───────────────────────────────────────────── */
 function FinalCTA() {
   return (
     <section className="py-24 md:py-36 px-4 relative overflow-hidden">
+      {/* Radial glow — exception: complex gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -571,25 +599,27 @@ function FinalCTA() {
         }}
       />
       <div className="relative z-10 max-w-3xl mx-auto text-center flex flex-col items-center gap-8">
-        <h2 className="font-heading font-black text-4xl md:text-6xl text-white leading-none tracking-tight">
+        <h2
+          className={`${syne.className} font-extrabold text-4xl md:text-6xl text-white leading-none tracking-tight`}
+        >
           Ready to make
           <br />
           content pay?
         </h2>
-        <p className="text-zinc-400 text-lg max-w-md leading-relaxed">
+        <p className={`${dmSans.className} text-zinc-400 text-lg max-w-md leading-relaxed`}>
           Join hundreds of creators already earning and brands already scaling
           on Creatify.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <Link
             href="/auth/signup?role=brand"
-            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors"
+            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors min-h-[44px] flex items-center justify-center"
           >
             I&apos;m a Brand
           </Link>
           <Link
             href="/auth/signup?role=creator"
-            className="border border-zinc-600 text-white px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors"
+            className="border border-zinc-600 text-white px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors min-h-[44px] flex items-center justify-center"
           >
             I&apos;m a Creator
           </Link>

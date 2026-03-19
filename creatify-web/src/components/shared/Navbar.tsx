@@ -15,7 +15,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
+    const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -41,13 +41,13 @@ export default function Navbar() {
           {/* Center nav — desktop */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.label}
                 href={link.href}
                 className="text-sm text-zinc-400 hover:text-white transition-colors duration-200"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -86,14 +86,14 @@ export default function Navbar() {
       >
         <div className="bg-[#0D0D0D] border-t border-zinc-800 px-6 py-7 flex flex-col gap-6">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               onClick={() => setMobileOpen(false)}
               className="text-base text-zinc-300 hover:text-white transition-colors"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
           <div className="flex flex-col gap-3 pt-4 border-t border-zinc-800">
             <Link
