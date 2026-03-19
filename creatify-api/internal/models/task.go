@@ -6,10 +6,12 @@ type Task struct {
 	ID          string    `json:"id" db:"id"`
 	CampaignID  string    `json:"campaign_id" db:"campaign_id"`
 	CreatorID   string    `json:"creator_id" db:"creator_id"`
-	VideoURL    string    `json:"video_url" db:"video_url"`
-	Status      string    `json:"status" db:"status"` // pending | submitted | approved | rejected | paid
-	Payout      float64   `json:"payout" db:"payout"`
-	SubmittedAt *time.Time `json:"submitted_at" db:"submitted_at"`
+	Status      string    `json:"status" db:"status"`
+	Platform    string    `json:"platform" db:"platform"`
+	PostURL     string    `json:"post_url" db:"post_url"`
+	PostID      string    `json:"post_id" db:"post_id"`
+	TotalViews  int64     `json:"total_views" db:"total_views"`
+	TotalEarned float64   `json:"total_earned" db:"total_earned"`
+	FraudScore  int       `json:"fraud_score" db:"fraud_score"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
