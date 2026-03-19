@@ -374,7 +374,124 @@ function ForBrands() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION 6 — EARNINGS ILLUSTRATION
+   SECTION 6 — FEATURE GRID
+───────────────────────────────────────────── */
+function FeatureGrid() {
+  const cards = [
+    {
+      icon: <Users size={22} />,
+      title: "Zero Follower Minimum",
+      body: "We removed the gate. 200 followers or 200,000 — the rate per view is identical. Quality content wins.",
+    },
+    {
+      icon: <Zap size={22} />,
+      title: "Real-Time Wallet",
+      body: "Every 6 hours your view count is checked and your earnings update. Watch your balance grow live.",
+    },
+    {
+      icon: <Globe size={22} />,
+      title: "All Major Platforms",
+      body: "TikTok, Instagram Reels, YouTube Shorts, Facebook — one platform, all your channels.",
+    },
+    {
+      icon: <ShieldCheck size={22} />,
+      title: "Protected Earnings",
+      body: "Campaign budgets are held in escrow from day one. Your earnings are locked in before you even post.",
+    },
+  ];
+
+  return (
+    <section className="py-24 md:py-32 px-4 bg-[#0D0D0D]">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-14">
+          <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
+            Why Creatify
+          </p>
+          <h2 className="font-heading font-bold text-3xl md:text-4xl text-white leading-tight">
+            Built different.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {cards.map((card) => (
+            <div
+              key={card.title}
+              className="bg-[#111111] border border-zinc-800 p-8 flex flex-col gap-5 hover:border-zinc-600 transition-colors duration-200"
+            >
+              <span className="text-[#6C47FF]">{card.icon}</span>
+              <div>
+                <p className="font-heading font-semibold text-white mb-2">
+                  {card.title}
+                </p>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  {card.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SECTION 7 — DUAL CTA STRIP
+───────────────────────────────────────────── */
+function DualCTAStrip() {
+  return (
+    <section className="border-y border-zinc-800">
+      <div className="flex flex-col md:flex-row">
+        {/* Left — Brands */}
+        <div className="flex-1 bg-[#111111] md:border-r border-zinc-800 px-10 py-16 md:py-20 flex flex-col gap-6">
+          <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold">
+            For Brands
+          </p>
+          <h3 className="font-heading font-bold text-2xl md:text-3xl text-white leading-tight">
+            Real reach. Zero waste.
+          </h3>
+          <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
+            Your budget only moves when views are delivered. Not when someone
+            promises they will be.
+          </p>
+          <div>
+            <Link
+              href="/auth/signup?role=brand"
+              className="inline-block bg-[#6C47FF] text-white px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200"
+            >
+              Launch a Campaign
+            </Link>
+          </div>
+        </div>
+
+        {/* Right — Creators */}
+        <div className="flex-1 bg-[#0A0A0A] px-10 py-16 md:py-20 flex flex-col gap-6">
+          <p className="text-xs text-[#00E5A0] uppercase tracking-widest font-semibold">
+            For Creators
+          </p>
+          <h3 className="font-heading font-bold text-2xl md:text-3xl text-white leading-tight">
+            Your phone is a paycheck.
+          </h3>
+          <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
+            Post what you already post. Just make sure a brand is behind it.
+            Cash out from LKR 500.
+          </p>
+          <div>
+            <Link
+              href="/auth/signup?role=creator"
+              className="inline-block border border-[#00E5A0] text-[#00E5A0] px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#00E5A0] hover:text-black transition-all duration-200"
+            >
+              Start Earning Free
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SECTION 8 — EARNINGS ILLUSTRATION
 ───────────────────────────────────────────── */
 function EarningsIllustration() {
   return (
@@ -496,6 +613,8 @@ export default function HomePage() {
         <HowItWorksCreators />
         <TheDifference />
         <ForBrands />
+        <FeatureGrid />
+        <DualCTAStrip />
         <EarningsIllustration />
         <FinalCTA />
       </main>
