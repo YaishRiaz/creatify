@@ -1,0 +1,38 @@
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+
+# Node
+node_modules/
+.next/
+out/
+build/
+dist/
+*.log
+.npm
+.DS_Store
+
+# Go
+creatify-api/bin/
+creatify-api/*.exe
+creatify-api/*.test
+creatify-api/vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# Supabase
+supabase/.branches
+supabase/.temp
