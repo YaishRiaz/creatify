@@ -24,7 +24,7 @@ const dmSans = DM_Sans({ subsets: ["latin"] });
 ───────────────────────────────────────────── */
 function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Radial glow — exception: complex gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -34,7 +34,7 @@ function Hero() {
         }}
       />
 
-      <div className="relative z-10 max-w-4xl mx-auto w-full flex flex-col items-start gap-8 pt-24 pb-20">
+      <div className="relative z-10 max-w-4xl mx-auto w-full flex flex-col items-start gap-8 pt-24 pb-20 px-6">
         {/* Badge */}
         <div className="flex items-center gap-2 border border-[#6C47FF]/50 text-[#6C47FF] text-sm px-4 py-2 rounded-full">
           <span className="animate-pulse-dot">🇱🇰</span>
@@ -56,23 +56,23 @@ function Hero() {
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <Link
             href="/auth/signup?role=brand"
-            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[44px] flex items-center justify-center"
+            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[52px] w-full sm:w-auto flex items-center justify-center"
           >
             Launch a Campaign
           </Link>
           <Link
             href="/auth/signup?role=creator"
-            className="border border-zinc-600 text-white px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors duration-200 min-h-[44px] flex items-center justify-center"
+            className="border border-zinc-600 text-white bg-transparent px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors duration-200 min-h-[52px] w-full sm:w-auto flex items-center justify-center"
           >
             Start Earning
           </Link>
         </div>
 
         {/* Stat pills */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           {[
             { icon: <Zap size={14} />, text: "Real-time earnings" },
             { icon: <Wallet size={14} />, text: "LKR 500 min cashout" },
@@ -83,7 +83,7 @@ function Hero() {
           ].map(({ icon, text }) => (
             <div
               key={text}
-              className="flex items-center gap-2 bg-[#111111] border border-zinc-800 px-4 py-3 text-sm text-zinc-300 rounded-lg"
+              className="flex items-center gap-2 px-4 py-2 border border-zinc-800 bg-[#111111] text-sm text-zinc-400 whitespace-nowrap"
             >
               <span className="text-zinc-500 shrink-0">{icon}</span>
               {text}
