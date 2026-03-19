@@ -166,7 +166,7 @@ function HowItWorks() {
           </h2>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mt-10">
           {brandSteps.map((step) => (
             <div
               key={step.n}
@@ -245,7 +245,7 @@ function HowItWorksCreators() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mt-10">
           {creatorSteps.map((step) => (
             <div
               key={step.n}
@@ -361,9 +361,11 @@ function FeatureGrid() {
           {cards.map((card) => (
             <div
               key={card.title}
-              className="bg-[#111111] border border-zinc-800 p-8 flex flex-col gap-5 hover:border-zinc-600 transition-colors duration-200"
+              className="bg-[#111111] border border-zinc-800 p-8 flex flex-col hover:border-zinc-600 transition-colors duration-200"
             >
-              <span className="text-[#6C47FF]">{card.icon}</span>
+              <div className="w-12 h-12 flex items-center justify-center rounded-none bg-[#6C47FF]/10 mb-4">
+                <span className="text-[#6C47FF]">{card.icon}</span>
+              </div>
               <div>
                 <p className={`${syne.className} font-bold text-white mb-2`}>
                   {card.title}
