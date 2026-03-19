@@ -18,21 +18,22 @@ func main() {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
-	}
+	var db *sql.DB
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		var err error
+		db, err = sql.Open("postgres", dbURL)
+		if err != nil {
+			log.Fatalf("Failed to open database connection: %v", err)
+		}
+		defer db.Close()
 
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatalf("Failed to open database connection: %v", err)
+		if err := db.Ping(); err != nil {
+			log.Fatalf("Failed to connect to database: %v", err)
+		}
+		log.Println("Database connected successfully")
+	} else {
+		log.Println("DATABASE_URL not set — running without database")
 	}
-	defer db.Close()
-
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	log.Println("Database connected successfully")
 
 	if os.Getenv("ENV") == "production" {
 		gin.SetMode(gin.ReleaseMode)
