@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Syne, DM_Sans } from 'next/font/google'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { useToast } from '@/components/shared/Toast'
@@ -9,8 +8,6 @@ import SubmitURLModal from '@/components/creator/SubmitURLModal'
 import { formatNumber, formatDate } from '@/lib/utils'
 import type { Task, Campaign } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface TaskWithCampaign extends Task {
   campaign: Pick<Campaign, 'id' | 'title' | 'payout_rate' | 'status' | 'brief' | 'hashtags'> & {
@@ -92,7 +89,7 @@ export default function CreatorTasksPage() {
 
   if (loading || userLoading) {
     return (
-      <div className={`${dmSans.className} animate-pulse flex flex-col gap-4`}>
+      <div className="font-sans animate-pulse flex flex-col gap-4">
         <div className="h-10 w-48 bg-zinc-800/50 rounded" />
         {[1,2,3].map(i => <div key={i} className="h-28 bg-zinc-800/50 rounded" />)}
       </div>
@@ -100,9 +97,9 @@ export default function CreatorTasksPage() {
   }
 
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>My Tasks</h1>
+        <h1 className="font-syne text-3xl font-extrabold text-white">My Tasks</h1>
         <p className="text-zinc-500 text-sm mt-1 flex flex-wrap gap-x-3">
           <span>
             <span className="text-white font-medium">
@@ -183,13 +180,13 @@ export default function CreatorTasksPage() {
                 {/* Right */}
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <div className="text-right">
-                    <p className={`${syne.className} text-xl font-extrabold text-[#00E5A0]`}>
+                    <p className="font-syne text-xl font-extrabold text-[#00E5A0]">
                       {formatNumber(task.total_views ?? 0)}
                     </p>
                     <p className="text-xs text-zinc-500">views</p>
                   </div>
                   <div className="text-right">
-                    <p className={`${syne.className} text-lg font-extrabold text-[#00E5A0]`}>
+                    <p className="font-syne text-lg font-extrabold text-[#00E5A0]">
                       LKR {(task.total_earned ?? 0).toLocaleString('en-LK')}
                     </p>
                     <p className="text-xs text-zinc-500">earned</p>

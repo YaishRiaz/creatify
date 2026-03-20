@@ -1,14 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Loader2, X } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { useToast } from '@/components/shared/Toast'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface CreatorProfile {
   id: string
@@ -86,18 +83,18 @@ export default function CreatorProfilePage() {
   }
 
   if (loading || userLoading) {
-    return <div className={`${dmSans.className} animate-pulse flex flex-col gap-6`}>
+    return <div className="font-sans animate-pulse flex flex-col gap-6">
       <div className="h-48 bg-zinc-800/50 rounded" />
     </div>
   }
 
   return (
-    <div className={dmSans.className}>
-      <h1 className={`${syne.className} text-3xl font-extrabold text-white mb-8`}>Profile</h1>
+    <div className="font-sans">
+      <h1 className="font-syne text-3xl font-extrabold text-white mb-8">Profile</h1>
 
       {/* Account info */}
       <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <h2 className={`${syne.className} font-bold text-white mb-5`}>Account Info</h2>
+        <h2 className="font-syne font-bold text-white mb-5">Account Info</h2>
         <div className="flex flex-col gap-4 max-w-md">
           <div>
             <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">Full Name</label>
@@ -137,7 +134,7 @@ export default function CreatorProfilePage() {
 
       {/* Social platforms */}
       <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <h2 className={`${syne.className} font-bold text-white mb-1`}>Your Connected Platforms</h2>
+        <h2 className="font-syne font-bold text-white mb-1">Your Connected Platforms</h2>
         <p className="text-sm text-zinc-500 mb-5">Add your usernames so brands can verify your posts.</p>
         <div className="flex flex-col gap-3 max-w-md">
           {PLATFORMS.map((p) => (
@@ -164,7 +161,7 @@ export default function CreatorProfilePage() {
 
       {/* NIC */}
       <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <h2 className={`${syne.className} font-bold text-white mb-3`}>NIC Number</h2>
+        <h2 className="font-syne font-bold text-white mb-3">NIC Number</h2>
         <div className="flex items-center gap-3">
           <p className="text-zinc-300 font-mono text-lg">{maskNIC(profile?.nic_number ?? null)}</p>
           <span className="text-xs bg-green-500/10 text-[#00E5A0] px-2 py-0.5">Verified</span>
@@ -174,7 +171,7 @@ export default function CreatorProfilePage() {
 
       {/* Danger zone */}
       <div className="bg-[#111111] border border-red-500/20 p-6">
-        <h2 className={`${syne.className} font-bold text-red-400 mb-3`}>Danger Zone</h2>
+        <h2 className="font-syne font-bold text-red-400 mb-3">Danger Zone</h2>
         <button
           onClick={() => setShowDeleteModal(true)}
           className="text-sm border border-red-500/40 text-red-400 px-5 py-2.5 hover:bg-red-500/10 transition-colors"
@@ -189,7 +186,7 @@ export default function CreatorProfilePage() {
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowDeleteModal(false)} />
           <div className="relative bg-[#111111] border border-zinc-800 w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className={`${syne.className} text-lg font-bold text-white`}>Delete Account</h3>
+              <h3 className="font-syne text-lg font-bold text-white">Delete Account</h3>
               <button onClick={() => setShowDeleteModal(false)} className="text-zinc-500 hover:text-white">
                 <X size={18} />
               </button>

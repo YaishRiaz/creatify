@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
@@ -12,7 +11,6 @@ import DataTable from '@/components/admin/DataTable'
 import AdminBadge from '@/components/admin/AdminBadge'
 import ConfirmModal from '@/components/admin/ConfirmModal'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function formatLKR(n: number) {
   return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -297,7 +295,7 @@ export default function CreatorsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-bold text-white`}>Creators</h1>
+        <h1 className="font-syne text-3xl font-bold text-white">Creators</h1>
         <p className="text-zinc-500 text-sm mt-1">Manage creator accounts</p>
       </div>
 
@@ -383,7 +381,7 @@ export default function CreatorsPage() {
       {activeCreator && modalType === 'adjust' && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center pt-32">
           <div className="bg-[#111111] border border-zinc-800 p-8 max-w-md w-full mx-4">
-            <h2 className={`${syne.className} text-xl font-bold text-white mb-1`}>Adjust Wallet</h2>
+            <h2 className="font-syne text-xl font-bold text-white mb-1">Adjust Wallet</h2>
             <p className="text-zinc-500 text-sm mb-6">
               Current balance: <span className="text-amber-400">{formatLKR(activeCreator.wallet_balance)}</span>
             </p>
@@ -443,7 +441,7 @@ export default function CreatorsPage() {
                   {getInitials(detailCreator.user?.full_name ?? '?')}
                 </div>
                 <div>
-                  <h2 className={`${syne.className} text-xl font-bold text-white`}>
+                  <h2 className="font-syne text-xl font-bold text-white">
                     {detailCreator.user?.full_name}
                   </h2>
                   <p className="text-sm text-zinc-500">{detailCreator.user?.email}</p>

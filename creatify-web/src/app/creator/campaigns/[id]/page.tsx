@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Syne, DM_Sans } from 'next/font/google'
 import { ArrowLeft, Clock, Loader2, CheckCircle } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
@@ -13,8 +12,6 @@ import OnboardingGate from '@/components/creator/OnboardingGate'
 import { formatLKR, formatNumber } from '@/lib/utils'
 import type { Campaign, Task } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface CampaignDetail extends Campaign {
   brand: { company_name: string; logo_url: string | null } | null
@@ -96,7 +93,7 @@ export default function CreatorCampaignDetailPage() {
 
   if (loading || userLoading) {
     return (
-      <div className={`${dmSans.className} animate-pulse flex flex-col gap-6`}>
+      <div className="font-sans animate-pulse flex flex-col gap-6">
         <div className="h-8 w-48 bg-zinc-800/50 rounded" />
         <div className="h-64 bg-zinc-800/50 rounded" />
         <div className="h-40 bg-zinc-800/50 rounded" />
@@ -106,7 +103,7 @@ export default function CreatorCampaignDetailPage() {
 
   if (!campaign) {
     return (
-      <div className={dmSans.className}>
+      <div className="font-sans">
         <p className="text-zinc-400">Campaign not found.</p>
         <Link href="/creator/campaigns" className="text-[#6C47FF] text-sm mt-2 inline-block">← Back to Campaigns</Link>
       </div>
@@ -121,7 +118,7 @@ export default function CreatorCampaignDetailPage() {
 
   return (
     <OnboardingGate creatorProfileId={creatorProfileId}>
-    <div className={dmSans.className}>
+    <div className="font-sans">
       {/* Back */}
       <Link href="/creator/campaigns" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white mb-6 transition-colors">
         <ArrowLeft size={14} /> Back to Campaigns
@@ -135,7 +132,7 @@ export default function CreatorCampaignDetailPage() {
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <p className="text-sm text-zinc-400 mb-1">{campaign.brand?.company_name}</p>
-                <h1 className={`${syne.className} text-2xl font-extrabold text-white`}>{campaign.title}</h1>
+                <h1 className="font-syne text-2xl font-extrabold text-white">{campaign.title}</h1>
               </div>
               <div className="flex flex-wrap gap-1 shrink-0">
                 {campaign.target_platforms.map((p) => (
@@ -147,16 +144,16 @@ export default function CreatorCampaignDetailPage() {
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-4 py-4 border-t border-b border-zinc-800 mb-4">
               <div>
-                <p className={`${syne.className} text-2xl font-extrabold text-[#00E5A0]`}>{formatLKR(campaign.payout_rate)}</p>
+                <p className="font-syne text-2xl font-extrabold text-[#00E5A0]">{formatLKR(campaign.payout_rate)}</p>
                 <p className="text-xs text-zinc-500">per 1,000 views</p>
               </div>
               <div>
-                <p className={`${syne.className} text-2xl font-extrabold text-white`}>{pct.toFixed(0)}%</p>
+                <p className="font-syne text-2xl font-extrabold text-white">{pct.toFixed(0)}%</p>
                 <p className="text-xs text-zinc-500">budget remaining</p>
               </div>
               {days !== null && (
                 <div>
-                  <p className={`${syne.className} text-2xl font-extrabold text-white flex items-center gap-1`}>
+                  <p className="font-syne text-2xl font-extrabold text-white flex items-center gap-1">
                     <Clock size={18} className="text-zinc-400" />{days}
                   </p>
                   <p className="text-xs text-zinc-500">days left</p>
@@ -182,7 +179,7 @@ export default function CreatorCampaignDetailPage() {
           {/* Brief */}
           {campaign.brief && (
             <div className="bg-[#111111] border border-zinc-800 p-6">
-              <h2 className={`${syne.className} font-bold text-white mb-3`}>Campaign Brief</h2>
+              <h2 className="font-syne font-bold text-white mb-3">Campaign Brief</h2>
               <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{campaign.brief}</p>
             </div>
           )}
@@ -190,7 +187,7 @@ export default function CreatorCampaignDetailPage() {
           {/* Dos & Don'ts */}
           {((campaign.do_list ?? []).length > 0 || (campaign.dont_list ?? []).length > 0) && (
             <div className="bg-[#111111] border border-zinc-800 p-6">
-              <h2 className={`${syne.className} font-bold text-white mb-4`}>Do&apos;s &amp; Don&apos;ts</h2>
+              <h2 className="font-syne font-bold text-white mb-4">Do&apos;s &amp; Don&apos;ts</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {(campaign.do_list ?? []).length > 0 && (
                   <div>
@@ -223,7 +220,7 @@ export default function CreatorCampaignDetailPage() {
           {/* Hashtags */}
           {(campaign.hashtags ?? []).length > 0 && (
             <div className="bg-[#111111] border border-zinc-800 p-6">
-              <h2 className={`${syne.className} font-bold text-white mb-3`}>Required Hashtags</h2>
+              <h2 className="font-syne font-bold text-white mb-3">Required Hashtags</h2>
               <div className="flex flex-wrap gap-2">
                 {campaign.hashtags!.map((h, i) => (
                   <button
@@ -245,7 +242,7 @@ export default function CreatorCampaignDetailPage() {
         <div className="flex flex-col gap-4">
           {/* Earnings calculator */}
           <div className="bg-[#111111] border border-zinc-800 p-6">
-            <h2 className={`${syne.className} font-bold text-white mb-4`}>Earnings Calculator</h2>
+            <h2 className="font-syne font-bold text-white mb-4">Earnings Calculator</h2>
             <div className="mb-4">
               <label className="text-xs text-zinc-500 block mb-2">Estimated views: {formatNumber(views)}</label>
               <input
@@ -263,7 +260,7 @@ export default function CreatorCampaignDetailPage() {
             </div>
             <div className="bg-zinc-900 p-4 text-center">
               <p className="text-xs text-zinc-500 mb-1">You&apos;d earn</p>
-              <p className={`${syne.className} text-3xl font-extrabold text-[#00E5A0]`}>{formatLKR(estimatedEarnings)}</p>
+              <p className="font-syne text-3xl font-extrabold text-[#00E5A0]">{formatLKR(estimatedEarnings)}</p>
               <p className="text-xs text-zinc-500 mt-1">at {formatNumber(views)} views</p>
             </div>
             <div className="grid grid-cols-3 gap-2 mt-3">

@@ -2,15 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Syne, DM_Sans } from 'next/font/google'
 import { PlusCircle, Megaphone } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { formatNumber, formatLKR, formatDate } from '@/lib/utils'
 import type { Campaign } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 type StatusFilter = 'all' | 'active' | 'paused' | 'completed' | 'draft' | 'pending_payment'
 
@@ -106,10 +103,10 @@ export default function CampaignsPage() {
   const filtered = filter === 'all' ? campaigns : campaigns.filter((c) => c.status === filter)
 
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>Campaigns</h1>
+        <h1 className="font-syne text-3xl font-extrabold text-white">Campaigns</h1>
         <Link
           href="/brand/campaigns/create"
           className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-6 py-3 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
@@ -151,7 +148,7 @@ export default function CampaignsPage() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Megaphone size={64} className="text-zinc-700 mb-4" />
-          <p className={`${syne.className} text-xl font-bold text-white mb-2`}>
+          <p className="font-syne text-xl font-bold text-white mb-2">
             {filter === 'all' ? 'No campaigns yet' : `No ${filter} campaigns`}
           </p>
           <p className="text-zinc-500 text-sm mb-6">
@@ -178,7 +175,7 @@ export default function CampaignsPage() {
             return (
               <div key={c.id} className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className={`${syne.className} text-lg font-bold text-white leading-tight`}>{c.title}</h3>
+                  <h3 className="font-syne text-lg font-bold text-white leading-tight">{c.title}</h3>
                   <span className={`text-xs px-2.5 py-1 shrink-0 capitalize ${STATUS_BADGE[c.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
                     {c.status.replace('_', ' ')}
                   </span>

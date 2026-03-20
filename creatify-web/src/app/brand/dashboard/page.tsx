@@ -3,15 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Megaphone, Eye, Wallet, TrendingDown, PlusCircle } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { formatNumber, formatLKR, getGreeting, formatDate } from '@/lib/utils'
 import type { Campaign } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface BrandProfile {
   id: string
@@ -126,11 +123,11 @@ export default function BrandDashboard() {
   const greeting = getGreeting()
 
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>
+          <h1 className="font-syne text-3xl font-extrabold text-white">
             {greeting}, {brandProfile?.company_name ?? user?.full_name ?? 'Brand'}
           </h1>
           <p className="text-zinc-500 text-sm mt-1">Here&apos;s how your campaigns are performing.</p>
@@ -157,7 +154,7 @@ export default function BrandDashboard() {
         <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-2">
           <div className="flex items-start justify-between">
             <div>
-              <p className={`${syne.className} text-3xl font-extrabold text-white`}>
+              <p className="font-syne text-3xl font-extrabold text-white">
                 {loading ? <span className="block w-12 h-8 bg-zinc-800/50 animate-pulse rounded" /> : activeCampaigns}
               </p>
               <p className="text-sm text-zinc-400 mt-1">Active Campaigns</p>
@@ -173,7 +170,7 @@ export default function BrandDashboard() {
         <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-2">
           <div className="flex items-start justify-between">
             <div>
-              <p className={`${syne.className} text-3xl font-extrabold text-white`}>
+              <p className="font-syne text-3xl font-extrabold text-white">
                 {loading ? <span className="block w-16 h-8 bg-zinc-800/50 animate-pulse rounded" /> : formatNumber(totalViews)}
               </p>
               <p className="text-sm text-zinc-400 mt-1">Views Delivered</p>
@@ -189,7 +186,7 @@ export default function BrandDashboard() {
         <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-2">
           <div className="flex items-start justify-between">
             <div>
-              <p className={`${syne.className} text-3xl font-extrabold text-white`}>
+              <p className="font-syne text-3xl font-extrabold text-white">
                 {loading ? <span className="block w-20 h-8 bg-zinc-800/50 animate-pulse rounded" /> : formatLKR(totalBudgetSpent)}
               </p>
               <p className="text-sm text-zinc-400 mt-1">Budget Spent</p>
@@ -205,7 +202,7 @@ export default function BrandDashboard() {
         <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-2">
           <div className="flex items-start justify-between">
             <div>
-              <p className={`${syne.className} text-3xl font-extrabold text-white`}>
+              <p className="font-syne text-3xl font-extrabold text-white">
                 {loading ? (
                   <span className="block w-16 h-8 bg-zinc-800/50 animate-pulse rounded" />
                 ) : avgCpv !== null ? (
@@ -227,7 +224,7 @@ export default function BrandDashboard() {
       {/* Campaigns Table */}
       <div className="bg-[#111111] border border-zinc-800">
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
-          <h2 className={`${syne.className} font-bold text-white text-lg`}>Your Campaigns</h2>
+          <h2 className="font-syne font-bold text-white text-lg">Your Campaigns</h2>
           <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{totalCampaigns}</span>
         </div>
 
@@ -242,7 +239,7 @@ export default function BrandDashboard() {
         ) : campaigns.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
             <Megaphone size={64} className="text-zinc-700 mb-4" />
-            <p className={`${syne.className} text-xl font-bold text-white mb-2`}>No campaigns yet</p>
+            <p className="font-syne text-xl font-bold text-white mb-2">No campaigns yet</p>
             <p className="text-zinc-500 text-sm mb-6 max-w-sm">
               Create your first campaign to start getting real content from real creators.
             </p>

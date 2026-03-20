@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Loader2, Video, CheckCircle, Clock, Lock } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useToast } from '@/components/shared/Toast'
@@ -9,8 +8,6 @@ import SubmitURLModal from '@/components/creator/SubmitURLModal'
 import { ONBOARDING_CAMPAIGN_ID, type OnboardingStatus } from '@/lib/onboarding'
 import type { Task, Campaign } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 const PLATFORMS = ['tiktok', 'instagram', 'youtube', 'facebook']
 const PLATFORM_LABEL: Record<string, string> = {
@@ -82,7 +79,7 @@ export default function OnboardingGate({ creatorProfileId, children }: Props) {
 
   if (status === 'loading') {
     return (
-      <div className={`${dmSans.className} flex items-center justify-center py-24`}>
+      <div className="font-sans flex items-center justify-center py-24">
         <Loader2 size={24} className="animate-spin text-zinc-500" />
       </div>
     )
@@ -94,14 +91,14 @@ export default function OnboardingGate({ creatorProfileId, children }: Props) {
 
   // Gate screen
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       {/* Lock banner */}
       <div className="bg-[#111111] border border-[#6C47FF]/30 p-6 mb-6 flex items-start gap-4">
         <div className="w-10 h-10 bg-[#6C47FF]/10 flex items-center justify-center shrink-0">
           <Lock size={18} className="text-[#6C47FF]" />
         </div>
         <div>
-          <p className={`${syne.className} font-bold text-white mb-1`}>Campaigns are locked</p>
+          <p className="font-syne font-bold text-white mb-1">Campaigns are locked</p>
           <p className="text-sm text-zinc-400">
             Complete the onboarding task below to unlock all campaigns and start earning.
           </p>
@@ -116,7 +113,7 @@ export default function OnboardingGate({ creatorProfileId, children }: Props) {
           </div>
           <div>
             <p className="text-xs text-zinc-500 uppercase tracking-wider">Required — One Time</p>
-            <h2 className={`${syne.className} text-xl font-extrabold text-white`}>
+            <h2 className="font-syne text-xl font-extrabold text-white">
               Introduce Creatify to Your Audience
             </h2>
           </div>

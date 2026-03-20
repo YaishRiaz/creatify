@@ -6,14 +6,11 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Check, Plus, X, ChevronLeft } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { formatLKR } from '@/lib/utils'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
@@ -512,7 +509,7 @@ function Step3({
             {rate > 0 && (
               <div className="mt-4 pt-4 border-t border-zinc-800">
                 <p className="text-xs text-zinc-500 mb-2">At LKR {rate}/1,000 views this campaign can deliver:</p>
-                <p className={`${syne.className} text-3xl font-extrabold text-[#00E5A0]`}>
+                <p className="font-syne text-3xl font-extrabold text-[#00E5A0]">
                   {maxViews.toLocaleString()} views
                 </p>
               </div>
@@ -601,7 +598,7 @@ function Step4({
         {/* Campaign Details */}
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Campaign Details</p>
-          <h2 className={`${syne.className} text-xl font-bold text-white mb-3`}>{data.title}</h2>
+          <h2 className="font-syne text-xl font-bold text-white mb-3">{data.title}</h2>
           <p className="text-sm text-zinc-400 mb-4">{data.description}</p>
           <div className="flex flex-wrap gap-1.5 mb-3">
             {(data.target_platforms ?? []).map((p) => (
@@ -682,7 +679,7 @@ function Step4({
       {/* Payment */}
       <div className="bg-zinc-900 border border-zinc-800 p-6">
         <p className="text-sm font-medium text-white mb-2">Complete Payment to Launch</p>
-        <p className={`${syne.className} text-3xl font-extrabold text-white mb-1`}>{formatLKR(budget)}</p>
+        <p className="font-syne text-3xl font-extrabold text-white mb-1">{formatLKR(budget)}</p>
         <p className="text-sm text-zinc-500 mb-4">Your campaign goes live immediately after payment is confirmed.</p>
         <div className="bg-[#6C47FF]/5 border border-[#6C47FF]/20 px-4 py-3 text-sm text-zinc-300 mb-6">
           You will be redirected to PayHere&apos;s secure payment page. After successful payment your campaign will automatically activate.
@@ -795,13 +792,13 @@ export default function CreateCampaignPage() {
   if (userLoading) return null
 
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <Link href="/brand/campaigns" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors mb-4">
             <ChevronLeft size={16} /> Campaigns
           </Link>
-          <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>New Campaign</h1>
+          <h1 className="font-syne text-3xl font-extrabold text-white">New Campaign</h1>
         </div>
 
         <StepIndicator current={step} />

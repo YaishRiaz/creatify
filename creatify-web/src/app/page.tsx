@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Syne, DM_Sans } from "next/font/google";
 import {
   Zap,
   Wallet,
@@ -14,9 +13,6 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
-
-const syne = Syne({ subsets: ["latin"], weight: ["700", "800"] });
-const dmSans = DM_Sans({ subsets: ["latin"] });
 
 /* ─────────────────────────────────────────────
    SECTION 1 — HERO
@@ -42,14 +38,14 @@ function Hero() {
 
         {/* Headline */}
         <div
-          className={`${syne.className} font-extrabold text-5xl md:text-7xl leading-none tracking-tight text-white`}
+          className="font-syne font-extrabold text-5xl md:text-7xl leading-none tracking-tight text-white"
         >
           <div>Post Content.</div>
           <div className="pl-4 md:pl-8 mt-1">Get Paid Per View.</div>
         </div>
 
         {/* Subheadline */}
-        <p className={`${dmSans.className} text-lg text-zinc-300 max-w-xl leading-relaxed`}>
+        <p className="font-sans text-lg text-zinc-300 max-w-xl leading-relaxed">
           Brands get authentic reach. Creators earn real money. No follower
           minimum. No agency. No waiting.
         </p>
@@ -160,7 +156,7 @@ function HowItWorks() {
             For Brands
           </p>
           <h2
-            className={`${syne.className} font-bold text-3xl md:text-5xl text-white leading-tight`}
+            className="font-syne font-bold text-3xl md:text-5xl text-white leading-tight"
           >
             Launch a campaign in minutes.
           </h2>
@@ -179,7 +175,7 @@ function HowItWorks() {
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
                   Step {step.n}
                 </p>
-                <p className={`${syne.className} font-bold text-white mb-2`}>
+                <p className="font-syne font-bold text-white mb-2">
                   {step.title}
                 </p>
                 <p className="text-sm text-zinc-400 leading-relaxed">
@@ -235,11 +231,11 @@ function HowItWorksCreators() {
             For Creators
           </p>
           <h2
-            className={`${syne.className} font-bold text-3xl md:text-4xl text-white leading-tight`}
+            className="font-syne font-bold text-3xl md:text-4xl text-white leading-tight"
           >
             Post once. Earn while you sleep.
           </h2>
-          <p className={`${dmSans.className} mt-4 text-zinc-400 max-w-xl leading-relaxed`}>
+          <p className="font-sans mt-4 text-zinc-400 max-w-xl leading-relaxed">
             No pitch emails. No negotiations. Browse tasks, post, submit your
             URL, get paid.
           </p>
@@ -258,7 +254,7 @@ function HowItWorksCreators() {
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
                   Step {step.n}
                 </p>
-                <p className={`${syne.className} font-bold text-white mb-2`}>
+                <p className="font-syne font-bold text-white mb-2">
                   {step.title}
                 </p>
                 <p className="text-sm text-zinc-400 leading-relaxed">
@@ -297,12 +293,12 @@ function TheDifference() {
       />
       <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-8 text-center">
         <p
-          className={`${syne.className} font-extrabold text-3xl md:text-5xl text-white leading-tight`}
+          className="font-syne font-extrabold text-3xl md:text-5xl text-white leading-tight"
         >
           &ldquo;A student with 300 followers earns the exact same rate as
           someone with 300,000.&rdquo;
         </p>
-        <p className={`${dmSans.className} text-zinc-400 text-lg max-w-lg leading-relaxed`}>
+        <p className="font-sans text-zinc-400 text-lg max-w-lg leading-relaxed">
           Views are views. We measure what actually happened, not who you are.
         </p>
         <Link
@@ -351,7 +347,7 @@ function FeatureGrid() {
             Why Creatify
           </p>
           <h2
-            className={`${syne.className} font-bold text-3xl md:text-4xl text-white leading-tight`}
+            className="font-syne font-bold text-3xl md:text-4xl text-white leading-tight"
           >
             Built different.
           </h2>
@@ -367,7 +363,7 @@ function FeatureGrid() {
                 <span className="text-[#6C47FF]">{card.icon}</span>
               </div>
               <div>
-                <p className={`${syne.className} font-bold text-white mb-2`}>
+                <p className="font-syne font-bold text-white mb-2">
                   {card.title}
                 </p>
                 <p className="text-sm text-zinc-400 leading-relaxed">
@@ -395,7 +391,7 @@ function DualCTAStrip() {
             For Brands
           </p>
           <h3
-            className={`${syne.className} font-bold text-2xl md:text-3xl text-white leading-tight`}
+            className="font-syne font-bold text-2xl md:text-3xl text-white leading-tight"
           >
             Real reach. Zero waste.
           </h3>
@@ -419,7 +415,7 @@ function DualCTAStrip() {
             For Creators
           </p>
           <h3
-            className={`${syne.className} font-bold text-2xl md:text-3xl text-white leading-tight`}
+            className="font-syne font-bold text-2xl md:text-3xl text-white leading-tight"
           >
             Your phone is a paycheck.
           </h3>

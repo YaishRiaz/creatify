@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Eye, Zap, CheckCircle, Search } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
@@ -12,8 +11,6 @@ import { formatNumber, formatDate, getGreeting } from '@/lib/utils'
 import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
 import type { Task, Campaign } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface CreatorProfile {
   id: string
@@ -125,7 +122,7 @@ export default function CreatorDashboard() {
 
   if (userLoading || loading) {
     return (
-      <div className={`${dmSans.className} animate-pulse flex flex-col gap-6`}>
+      <div className="font-sans animate-pulse flex flex-col gap-6">
         <div className="h-10 w-64 bg-zinc-800/50 rounded" />
         <div className="h-40 bg-zinc-800/50 rounded" />
         <div className="grid grid-cols-3 gap-4">{[1,2,3].map(i => <div key={i} className="h-28 bg-zinc-800/50 rounded" />)}</div>
@@ -141,7 +138,7 @@ export default function CreatorDashboard() {
   const trackingTasks = tasks.filter((t) => ['submitted', 'tracking'].includes(t.status))
 
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-6">{error}</div>
       )}
@@ -150,7 +147,7 @@ export default function CreatorDashboard() {
       {onboardingTask === null && (
         <div className="bg-[#6C47FF]/5 border border-[#6C47FF]/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">
-            <p className={`${syne.className} font-bold text-white mb-1`}>🎬 One task before you start</p>
+            <p className="font-syne font-bold text-white mb-1">🎬 One task before you start</p>
             <p className="text-sm text-zinc-400">Post a video about Creatify to unlock all campaigns. Takes 5 minutes.</p>
           </div>
           <Link href="/creator/campaigns" className="text-sm bg-[#6C47FF] text-white px-5 py-2.5 hover:bg-[#5538ee] transition-colors shrink-0">
@@ -161,7 +158,7 @@ export default function CreatorDashboard() {
       {onboardingTask?.status === 'accepted' && (
         <div className="bg-amber-500/5 border border-amber-500/30 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">
-            <p className={`${syne.className} font-bold text-amber-300 mb-1`}>⚠ Submit your Creatify video URL</p>
+            <p className="font-syne font-bold text-amber-300 mb-1">⚠ Submit your Creatify video URL</p>
             <p className="text-sm text-zinc-400">You accepted the onboarding task. Post your video then submit the URL to unlock campaigns.</p>
           </div>
           <Link href="/creator/campaigns" className="text-sm bg-amber-500 text-black px-5 py-2.5 hover:bg-amber-400 transition-colors shrink-0 font-semibold">
@@ -181,7 +178,7 @@ export default function CreatorDashboard() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>
+        <h1 className="font-syne text-3xl font-extrabold text-white">
           {getGreeting()}, {user?.full_name}
         </h1>
         <p className="text-zinc-500 text-sm mt-1">Here&apos;s how your content is performing.</p>
@@ -191,7 +188,7 @@ export default function CreatorDashboard() {
       <div className="bg-[#111111] border border-zinc-800 p-6 md:p-8 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">Available to Cash Out</p>
-          <p className={`${syne.className} text-4xl md:text-5xl font-extrabold text-[#00E5A0] break-all`}>
+          <p className="font-syne text-4xl md:text-5xl font-extrabold text-[#00E5A0] break-all">
             LKR {walletBalance.toLocaleString('en-LK')}
           </p>
           {walletBalance >= 500 ? (
@@ -209,7 +206,7 @@ export default function CreatorDashboard() {
         </div>
         <div className="text-right md:border-l md:border-zinc-800 md:pl-8">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Lifetime Earned</p>
-          <p className={`${syne.className} text-2xl font-extrabold text-zinc-300`}>
+          <p className="font-syne text-2xl font-extrabold text-zinc-300">
             LKR {totalEarned.toLocaleString('en-LK')}
           </p>
         </div>
@@ -225,7 +222,7 @@ export default function CreatorDashboard() {
           <div key={label} className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-2">
             <div className="flex items-start justify-between">
               <div>
-                <p className={`${syne.className} text-3xl font-extrabold text-white`}>{value}</p>
+                <p className="font-syne text-3xl font-extrabold text-white">{value}</p>
                 <p className="text-sm text-zinc-400 mt-1">{label}</p>
               </div>
               <div className={`w-10 h-10 ${bg} flex items-center justify-center shrink-0`}>
@@ -241,7 +238,7 @@ export default function CreatorDashboard() {
       {trackingTasks.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className={`${syne.className} font-bold text-white text-lg`}>Currently Tracking</h2>
+            <h2 className="font-syne font-bold text-white text-lg">Currently Tracking</h2>
             <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{trackingTasks.length}</span>
           </div>
           <div className="flex flex-col gap-3">
@@ -253,11 +250,11 @@ export default function CreatorDashboard() {
                   <span className={`inline-block text-xs px-2 py-0.5 mt-1 capitalize ${PLATFORM_BADGE[t.platform] ?? 'bg-zinc-800 text-zinc-400'}`}>{t.platform}</span>
                 </div>
                 <div className="text-center">
-                  <p className={`${syne.className} text-2xl font-extrabold text-[#00E5A0]`}>{formatNumber(t.total_views ?? 0)}</p>
+                  <p className="font-syne text-2xl font-extrabold text-[#00E5A0]">{formatNumber(t.total_views ?? 0)}</p>
                   <p className="text-xs text-zinc-500">views</p>
                 </div>
                 <div className="text-right">
-                  <p className={`${syne.className} text-xl font-extrabold text-[#00E5A0]`}>LKR {(t.total_earned ?? 0).toLocaleString('en-LK')}</p>
+                  <p className="font-syne text-xl font-extrabold text-[#00E5A0]">LKR {(t.total_earned ?? 0).toLocaleString('en-LK')}</p>
                   <p className="text-xs text-zinc-500 mb-1">earned</p>
                   <span className={`text-xs px-2 py-0.5 capitalize ${TASK_STATUS_BADGE[t.status] ?? 'bg-zinc-800 text-zinc-400'}`}>{t.status}</span>
                 </div>
@@ -302,7 +299,7 @@ export default function CreatorDashboard() {
 
       {/* Recent earnings feed */}
       <div>
-        <h2 className={`${syne.className} font-bold text-white text-lg mb-4`}>Recent Earnings</h2>
+        <h2 className="font-syne font-bold text-white text-lg mb-4">Recent Earnings</h2>
         {snapshots.length === 0 ? (
           <div className="bg-[#111111] border border-zinc-800 p-8 text-center">
             <p className="text-zinc-500 text-sm">Your earnings will appear here as views come in.</p>
