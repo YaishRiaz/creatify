@@ -58,13 +58,10 @@ export default function AdminSettingsPage() {
     setPollLoading(true)
     setPollStatus('idle')
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL
-      const res = await fetch(`${apiUrl}/api/v1/admin/poll/trigger`, {
+      const res = await fetch('/api/poll/trigger', {
         method: 'POST',
-        headers: {
-          'X-Poll-Secret': process.env.NEXT_PUBLIC_POLL_SECRET ?? '',
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: process.env.NEXT_PUBLIC_POLL_SECRET ?? '' }),
       })
       if (res.ok) {
         setPollStatus('success')
