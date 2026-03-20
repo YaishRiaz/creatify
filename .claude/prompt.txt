@@ -1,0 +1,100 @@
+Fix the final two Cloudflare Pages edge runtime errors 
+in creatify-web.
+
+These two routes are missing export const runtime = 'edge':
+- /_not-found
+- /auth/forgot-password
+
+STEP 1 — Fix the not-found page
+
+Create src/app/not-found.tsx if it doesn't exist,
+or update it if it does:
+
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
+export default function NotFound() {
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] 
+    flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-6xl font-black text-white 
+        font-syne mb-4">404</h1>
+        <p className="text-zinc-400 text-lg mb-8">
+          This page doesn't exist.
+        </p>
+        <a 
+          href="/"
+          className="bg-[#6C47FF] text-white px-8 py-4 
+          font-semibold hover:bg-[#5538ee] transition-colors"
+        >
+          Go Home
+        </a>
+      </div>
+    </div>
+  )
+}
+
+STEP 2 — Fix forgot password page
+
+Open src/app/auth/forgot-password/page.tsx
+Add these two lines at the very top:
+
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
+If the file doesn't exist create it:
+
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
+export default function ForgotPassword() {
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] 
+    flex items-center justify-center px-4">
+      <div className="bg-[#111111] border border-zinc-800 
+      p-10 w-full max-w-md">
+        <a href="/" className="text-[#6C47FF] font-bold 
+        text-xl font-syne block mb-8">
+          Creatify
+        </a>
+        <h1 className="text-2xl font-black text-white 
+        font-syne mb-2">
+          Reset Password
+        </h1>
+        <p className="text-zinc-400 mb-8">
+          Enter your email and we'll send you a reset link.
+        </p>
+        <p className="text-zinc-500 text-sm">
+          Coming soon. Contact support@creatify.lk 
+          for password resets.
+        </p>
+        <a 
+          href="/auth/login"
+          className="block mt-6 text-[#6C47FF] 
+          hover:text-white transition-colors"
+        >
+          ← Back to Login
+        </a>
+      </div>
+    </div>
+  )
+}
+
+STEP 3 — Run build to confirm it passes
+npm run build
+
+Should show:
+✓ Compiled successfully
+✓ Generating static pages
+Build Completed in .vercel/output
+
+STEP 4 — Commit and push:
+cd /d/creatify
+git add .
+git commit -m "fix: add edge runtime to not-found and forgot-password pages"
+git push origin develop
+git checkout main
+git merge develop
+git push origin main
+git checkout develop
