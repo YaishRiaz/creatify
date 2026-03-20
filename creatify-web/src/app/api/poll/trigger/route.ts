@@ -1,3 +1,5 @@
+export const runtime = 'edge'
+
 import { NextRequest, NextResponse } from 'next/server'
 
 // Allows the admin settings page to trigger a poll cycle from the browser.
