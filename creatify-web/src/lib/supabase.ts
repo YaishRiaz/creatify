@@ -1,9 +1,21 @@
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Lazy client — only created when called
+// Never created at module load time
+export function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Singleton — all client components share one GoTrueClient instance
-const browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  if (!url || !key) {
+    throw new Error('Missing Supabase public environment variables')
+  }
 
-export const createSupabaseClient = () => browserClient
+  return createClient(url, key)
+}
+
+// Keep this for backwards compatibility with auth-helpers-nextjs usage
+export function createSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  return createClient(url, key)
+}
