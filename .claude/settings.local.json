@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh:*)"
+      "Bash(gh:*)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(powershell:*)",
+      "Bash(npm run:*)",
+      "Bash(cat:*)",
+      "Bash(xargs grep:*)",
+      "Bash(xxd:*)",
+      "Bash(python3:*)"
     ]
   }
 }
