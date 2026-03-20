@@ -2,8 +2,33 @@ import { createServerClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+function applySecurityHeaders(res: NextResponse, supabaseUrl: string) {
+  res.headers.set('X-Frame-Options', 'DENY')
+  res.headers.set('X-Content-Type-Options', 'nosniff')
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  res.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      `connect-src 'self' ${supabaseUrl} https://api.apify.com https://www.googleapis.com`,
+      "font-src 'self' https://fonts.gstatic.com",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ')
+  )
+}
+
 export async function proxy(req: NextRequest) {
   const res = NextResponse.next()
+
+  // Apply security headers to every response
+  applySecurityHeaders(res, process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,37 +65,17 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // Logged in — redirect away from auth pages based on role
-  if (
-    user &&
-    (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))
-  ) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role === 'brand') {
-      return NextResponse.redirect(new URL('/brand/dashboard', req.url))
-    }
-    if (userData?.role === 'creator') {
-      return NextResponse.redirect(new URL('/creator/dashboard', req.url))
-    }
-    if (userData?.role === 'admin') {
-      return NextResponse.redirect(new URL('/admin/dashboard', req.url))
-    }
-  }
-
   return res
 }
 
 export const config = {
+  // Only protect routes that require authentication.
+  // Auth pages (/auth/login, /auth/signup) are intentionally excluded —
+  // they are static pages and cannot have middleware lambdas in the Vercel
+  // build output. Logged-in users on auth pages are redirected client-side.
   matcher: [
     '/brand/:path*',
     '/creator/:path*',
     '/admin/:path*',
-    '/auth/login',
-    '/auth/signup',
   ],
 }

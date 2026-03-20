@@ -15,34 +15,40 @@ export default function AdminSetupPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function checkAdmins() {
-      const supabase = createSupabaseClient()
-      const { count } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'admin')
-      setAdminCount(count ?? 0)
-      setLoading(false)
-    }
-    checkAdmins()
+    // Server-side check — does not require auth
+    fetch('/api/admin/setup')
+      .then((r) => r.json())
+      .then((d) => setAdminCount(d.adminCount ?? 0))
+      .catch(() => setAdminCount(0))
+      .finally(() => setLoading(false))
   }, [])
 
   async function handlePromote() {
     setSubmitting(true)
     setError(null)
+
     const supabase = createSupabaseClient()
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
+    const token = session?.access_token
+
+    if (!token) {
       setError('You must be logged in to perform this action.')
       setSubmitting(false)
       return
     }
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ role: 'admin' })
-      .eq('id', session.user.id)
-    if (updateError) {
-      setError(updateError.message)
+
+    // Call server-side route — promotion is enforced server-side
+    const res = await fetch('/api/admin/setup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error ?? 'Promotion failed')
     } else {
       setSuccess(true)
       setAdminCount(1)
