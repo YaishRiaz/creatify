@@ -6,92 +6,78 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
 
-const apiBase = "https://www.googleapis.com/youtube/v3"
-
-// ViewData holds the normalised view statistics for a single video.
-type ViewData struct {
-	Views    int64
-	Likes    int64
-	Comments int64
-}
+const youtubeAPIBase = "https://www.googleapis.com/youtube/v3"
 
 // Client holds credentials and the HTTP client.
 type Client struct {
-	apiKey string
-	http   *http.Client
+	apiKey     string
+	httpClient *http.Client
 }
 
-// New creates a YouTube client with a 30-second timeout.
-func New(apiKey string) *Client {
+// NewClient creates a YouTube client reading YOUTUBE_API_KEY from the environment.
+func NewClient() *Client {
 	return &Client{
-		apiKey: apiKey,
-		http:   &http.Client{Timeout: 30 * time.Second},
+		apiKey: os.Getenv("YOUTUBE_API_KEY"),
+		httpClient: &http.Client{
+			Timeout: 15 * time.Second,
+		},
 	}
 }
 
-// FetchVideo returns statistics for a single YouTube video ID.
-// videoID is the 11-character ID (e.g. "dQw4w9WgXcQ"), not the full URL.
-func (c *Client) FetchVideo(ctx context.Context, videoID string) (*ViewData, error) {
-	url := fmt.Sprintf("%s/videos?part=statistics&id=%s&key=%s", apiBase, videoID, c.apiKey)
+// YouTubeResponse is the parsed response from the YouTube Data API v3.
+type YouTubeResponse struct {
+	Items []struct {
+		Statistics struct {
+			ViewCount    string `json:"viewCount"`
+			LikeCount    string `json:"likeCount"`
+			CommentCount string `json:"commentCount"`
+		} `json:"statistics"`
+	} `json:"items"`
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+// GetVideoViews returns views, likes, and comments for a YouTube video ID.
+// videoID is the 11-character ID (e.g. "dQw4w9WgXcQ"), not the full URL.
+func (c *Client) GetVideoViews(ctx context.Context, videoID string) (int64, int64, int64, error) {
+	if c.apiKey == "" {
+		return 0, 0, 0, fmt.Errorf("YOUTUBE_API_KEY not set")
 	}
 
-	resp, err := c.http.Do(req)
+	url := fmt.Sprintf("%s/videos?part=statistics&id=%s&key=%s", youtubeAPIBase, videoID, c.apiKey)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("http request: %w", err)
+		return 0, 0, 0, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("youtube API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("youtube API status %d: %s", resp.StatusCode, truncate(string(raw), 200))
+		return 0, 0, 0, fmt.Errorf("youtube API returned status %d", resp.StatusCode)
 	}
 
-	var result struct {
-		Items []struct {
-			Statistics struct {
-				ViewCount    string `json:"viewCount"`
-				LikeCount    string `json:"likeCount"`
-				CommentCount string `json:"commentCount"`
-			} `json:"statistics"`
-		} `json:"items"`
-	}
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
-	}
-	if len(result.Items) == 0 {
-		return nil, fmt.Errorf("video %s not found or is private", videoID)
+	var ytResp YouTubeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&ytResp); err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to decode youtube response: %w", err)
 	}
 
-	stats := result.Items[0].Statistics
-	return &ViewData{
-		Views:    parseCount(stats.ViewCount),
-		Likes:    parseCount(stats.LikeCount),
-		Comments: parseCount(stats.CommentCount),
-	}, nil
-}
-
-func parseCount(s string) int64 {
-	n, _ := strconv.ParseInt(s, 10, 64)
-	return n
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
+	if len(ytResp.Items) == 0 {
+		return 0, 0, 0, fmt.Errorf("video %s not found or is private", videoID)
 	}
-	return s[:n] + "..."
+
+	stats := ytResp.Items[0].Statistics
+	views, _ := strconv.ParseInt(stats.ViewCount, 10, 64)
+	likes, _ := strconv.ParseInt(stats.LikeCount, 10, 64)
+	comments, _ := strconv.ParseInt(stats.CommentCount, 10, 64)
+
+	return views, likes, comments, nil
 }

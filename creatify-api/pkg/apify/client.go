@@ -1,6 +1,5 @@
 // Package apify wraps the Apify platform API for scraping social media view counts.
-// TikTok, Instagram, and Facebook views are fetched through Apify actors because
-// those platforms have no public official API for view counts.
+// Uses the async actor run pattern: start run → poll status → fetch dataset.
 package apify
 
 import (
@@ -10,169 +9,245 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
 const (
 	baseURL = "https://api.apify.com/v2"
 
-	// Actor IDs — these are well-maintained public actors on Apify.
-	actorTikTok    = "clockworks~free-tiktok-scraper"
-	actorInstagram = "apify~instagram-scraper"
-	actorFacebook  = "apify~facebook-video-scraper"
+	tiktokActorID = "clockworks/free-tiktok-scraper"
+	igActorID     = "apify/instagram-scraper"
+	fbActorID     = "apify/facebook-scraper"
 
-	// run-sync-get-dataset-items blocks until the run finishes and returns items.
-	// Apify enforces a 5-min hard limit; we set our own 30s via context.
-	runSyncPath = "/acts/%s/run-sync-get-dataset-items"
+	pollInterval = 3 * time.Second
+	maxWaitTime  = 60 * time.Second
 )
-
-// ViewData is the normalised result returned by all platform scrapers.
-type ViewData struct {
-	Views    int64
-	Likes    int64
-	Comments int64
-}
 
 // Client holds the HTTP client and credentials.
 type Client struct {
-	token  string
-	http   *http.Client
+	apiToken   string
+	httpClient *http.Client
 }
 
-// New creates an Apify client with a 30-second timeout on all calls.
-func New(apiToken string) *Client {
+// NewClient creates an Apify client reading APIFY_API_TOKEN from the environment.
+func NewClient() *Client {
 	return &Client{
-		token: apiToken,
-		http: &http.Client{
-			Timeout: 30 * time.Second,
+		apiToken: os.Getenv("APIFY_API_TOKEN"),
+		httpClient: &http.Client{
+			Timeout: 90 * time.Second,
 		},
 	}
 }
 
-// FetchTikTok returns view stats for a public TikTok video URL.
-func (c *Client) FetchTikTok(ctx context.Context, postURL string) (*ViewData, error) {
-	input := map[string]interface{}{
-		"postURLs": []string{postURL},
-		"maxItems": 1,
-	}
-	items, err := c.runSync(ctx, actorTikTok, input)
-	if err != nil {
-		return nil, fmt.Errorf("tiktok scrape: %w", err)
-	}
-	if len(items) == 0 {
-		return nil, fmt.Errorf("tiktok scrape: no items returned for %s", postURL)
-	}
-	item := items[0]
-	return &ViewData{
-		Views:    int64Field(item, "playCount", "videoPlayCount"),
-		Likes:    int64Field(item, "diggCount", "likesCount"),
-		Comments: int64Field(item, "commentCount"),
-	}, nil
+// ActorRunResponse is the response from starting an actor run.
+type ActorRunResponse struct {
+	Data struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+	} `json:"data"`
 }
 
-// FetchInstagram returns view stats for a public Instagram reel or post URL.
-func (c *Client) FetchInstagram(ctx context.Context, postURL string) (*ViewData, error) {
+// RunStatusResponse is the response when polling run status.
+type RunStatusResponse struct {
+	Data struct {
+		Status           string `json:"status"`
+		DefaultDatasetID string `json:"defaultDatasetId"`
+	} `json:"data"`
+}
+
+// GetTikTokViews fetches view count for a public TikTok video URL.
+// Returns views, likes, comments.
+func (c *Client) GetTikTokViews(ctx context.Context, videoURL string) (int64, int64, int64, error) {
 	input := map[string]interface{}{
-		"directUrls":   []string{postURL},
-		"resultsType":  "posts",
+		"postURLs":             []string{videoURL},
+		"resultsPerPage":       1,
+		"shouldDownloadVideos": false,
+		"shouldDownloadCovers": false,
+	}
+
+	datasetID, err := c.runActor(ctx, tiktokActorID, input)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("tiktok actor failed: %w", err)
+	}
+
+	items, err := c.getDatasetItems(ctx, datasetID)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to get tiktok results: %w", err)
+	}
+	if len(items) == 0 {
+		return 0, 0, 0, fmt.Errorf("no data returned for tiktok video")
+	}
+
+	item := items[0]
+	views := int64(getFloat(item, "playCount"))
+	likes := int64(getFloat(item, "diggCount"))
+	comments := int64(getFloat(item, "commentCount"))
+
+	return views, likes, comments, nil
+}
+
+// GetInstagramViews fetches view count for a public Instagram reel or post URL.
+// Returns views, likes, comments.
+func (c *Client) GetInstagramViews(ctx context.Context, postURL string) (int64, int64, int64, error) {
+	input := map[string]interface{}{
+		"directUrls":    []string{postURL},
+		"resultsType":   "posts",
+		"resultsLimit":  1,
+		"addParentData": false,
+	}
+
+	datasetID, err := c.runActor(ctx, igActorID, input)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("instagram actor failed: %w", err)
+	}
+
+	items, err := c.getDatasetItems(ctx, datasetID)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to get instagram results: %w", err)
+	}
+	if len(items) == 0 {
+		return 0, 0, 0, fmt.Errorf("no data returned for instagram post")
+	}
+
+	item := items[0]
+	// Instagram uses videoViewCount for reels; fall back to likesCount for image posts.
+	views := int64(getFloat(item, "videoViewCount"))
+	if views == 0 {
+		views = int64(getFloat(item, "likesCount"))
+	}
+	likes := int64(getFloat(item, "likesCount"))
+	comments := int64(getFloat(item, "commentsCount"))
+
+	return views, likes, comments, nil
+}
+
+// GetFacebookViews fetches view count for a public Facebook video URL.
+// Returns views, likes, comments.
+func (c *Client) GetFacebookViews(ctx context.Context, postURL string) (int64, int64, int64, error) {
+	input := map[string]interface{}{
+		"startUrls":    []map[string]string{{"url": postURL}},
 		"resultsLimit": 1,
 	}
-	items, err := c.runSync(ctx, actorInstagram, input)
+
+	datasetID, err := c.runActor(ctx, fbActorID, input)
 	if err != nil {
-		return nil, fmt.Errorf("instagram scrape: %w", err)
+		return 0, 0, 0, fmt.Errorf("facebook actor failed: %w", err)
+	}
+
+	items, err := c.getDatasetItems(ctx, datasetID)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("failed to get facebook results: %w", err)
 	}
 	if len(items) == 0 {
-		return nil, fmt.Errorf("instagram scrape: no items returned for %s", postURL)
+		return 0, 0, 0, fmt.Errorf("no data returned for facebook post")
 	}
+
 	item := items[0]
-	return &ViewData{
-		Views:    int64Field(item, "videoViewCount", "videoPlayCount"),
-		Likes:    int64Field(item, "likesCount", "likesCount"),
-		Comments: int64Field(item, "commentsCount"),
-	}, nil
+	views := int64(getFloat(item, "videoViewCount"))
+	likes := int64(getFloat(item, "likesCount"))
+	comments := int64(getFloat(item, "commentsCount"))
+
+	return views, likes, comments, nil
 }
 
-// FetchFacebook returns view stats for a public Facebook video URL.
-func (c *Client) FetchFacebook(ctx context.Context, postURL string) (*ViewData, error) {
-	input := map[string]interface{}{
-		"startUrls": []map[string]string{{"url": postURL}},
-		"maxItems":  1,
-	}
-	items, err := c.runSync(ctx, actorFacebook, input)
+// runActor POSTs to /acts/{id}/runs, then polls /actor-runs/{runId} until
+// the run reaches a terminal state. Returns the defaultDatasetId on success.
+func (c *Client) runActor(ctx context.Context, actorID string, input interface{}) (string, error) {
+	inputJSON, err := json.Marshal(input)
 	if err != nil {
-		return nil, fmt.Errorf("facebook scrape: %w", err)
-	}
-	if len(items) == 0 {
-		return nil, fmt.Errorf("facebook scrape: no items returned for %s", postURL)
-	}
-	item := items[0]
-	return &ViewData{
-		Views:    int64Field(item, "videoViewCount", "viewCount"),
-		Likes:    int64Field(item, "likesCount", "reactionsCount"),
-		Comments: int64Field(item, "commentsCount"),
-	}, nil
-}
-
-// runSync calls the Apify run-sync-get-dataset-items endpoint.
-// It posts the actor input, waits for the run to finish, and returns the dataset items.
-func (c *Client) runSync(ctx context.Context, actorID string, input interface{}) ([]map[string]interface{}, error) {
-	body, err := json.Marshal(input)
-	if err != nil {
-		return nil, fmt.Errorf("marshal input: %w", err)
+		return "", fmt.Errorf("failed to marshal input: %w", err)
 	}
 
-	url := fmt.Sprintf("%s%s?token=%s&timeout=30&format=json&clean=true",
-		baseURL, fmt.Sprintf(runSyncPath, actorID), c.token)
+	url := fmt.Sprintf("%s/acts/%s/runs?token=%s", baseURL, actorID, c.apiToken)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(inputJSON))
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.http.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("http request: %w", err)
+		return "", fmt.Errorf("failed to start actor: %w", err)
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read body: %w", err)
+	var runResp ActorRunResponse
+	if err := json.NewDecoder(resp.Body).Decode(&runResp); err != nil {
+		return "", fmt.Errorf("failed to decode run response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("apify status %d: %s", resp.StatusCode, truncate(string(raw), 200))
+	runID := runResp.Data.ID
+	if runID == "" {
+		return "", fmt.Errorf("no run ID returned from Apify")
 	}
+
+	// Poll for completion.
+	deadline := time.Now().Add(maxWaitTime)
+	for time.Now().Before(deadline) {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(pollInterval):
+		}
+
+		statusURL := fmt.Sprintf("%s/actor-runs/%s?token=%s", baseURL, runID, c.apiToken)
+
+		statusResp, err := c.httpClient.Get(statusURL)
+		if err != nil {
+			continue // retry on transient network error
+		}
+
+		var status RunStatusResponse
+		body, _ := io.ReadAll(statusResp.Body)
+		statusResp.Body.Close()
+		json.Unmarshal(body, &status) //nolint:errcheck
+
+		switch status.Data.Status {
+		case "SUCCEEDED":
+			return status.Data.DefaultDatasetID, nil
+		case "FAILED", "ABORTED", "TIMED-OUT":
+			return "", fmt.Errorf("actor run %s ended with status: %s", runID, status.Data.Status)
+		}
+		// RUNNING or READY — keep polling.
+	}
+
+	return "", fmt.Errorf("actor run timed out after %v", maxWaitTime)
+}
+
+// getDatasetItems retrieves results from a completed actor run dataset.
+func (c *Client) getDatasetItems(ctx context.Context, datasetID string) ([]map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/datasets/%s/items?token=%s&format=json&limit=10", baseURL, datasetID, c.apiToken)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch dataset: %w", err)
+	}
+	defer resp.Body.Close()
 
 	var items []map[string]interface{}
-	if err := json.Unmarshal(raw, &items); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		return nil, fmt.Errorf("failed to decode items: %w", err)
 	}
+
 	return items, nil
 }
 
-// int64Field reads the first matching key from a map as int64.
-// Apify actors use different field names across versions; this handles both.
-func int64Field(m map[string]interface{}, keys ...string) int64 {
-	for _, k := range keys {
-		if v, ok := m[k]; ok {
-			switch n := v.(type) {
-			case float64:
-				return int64(n)
-			case int64:
-				return n
-			case int:
-				return int64(n)
-			}
+// getFloat safely extracts a float64 from a map.
+func getFloat(m map[string]interface{}, key string) float64 {
+	if v, ok := m[key]; ok {
+		switch val := v.(type) {
+		case float64:
+			return val
+		case int:
+			return float64(val)
 		}
 	}
 	return 0
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
 }

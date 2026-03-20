@@ -44,5 +44,15 @@ type PollResult struct {
 	EarningsAdded int64 // cents
 	FraudScore    int
 	Flagged       bool
-	BudgetDepleted bool
+	Error         error
+}
+
+// ViewAPIResult holds the raw data returned from any social platform API.
+type ViewAPIResult struct {
+	ViewCount    int64
+	LikeCount    int64
+	CommentCount int64
+	ShareCount   int64
+	IsPublic     bool
+	Error        error
 }
