@@ -1,14 +1,9 @@
 export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-
-const adminClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
 
 // Allowed roles users can self-register as. Admin must be set via Supabase dashboard.
 const ALLOWED_ROLES = ['creator', 'brand'] as const
@@ -24,6 +19,12 @@ function isValidPassword(password: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+
   // Rate limit: 5 signups per IP per 10 minutes
   const ip = getClientIp(req)
   const { allowed, resetMs } = checkRateLimit(`signup:${ip}`, 5, 10 * 60 * 1000)

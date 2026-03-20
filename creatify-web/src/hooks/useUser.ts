@@ -1,15 +1,23 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import type { User } from '@/types'
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 export function useUser() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createSupabaseClient()
 
   useEffect(() => {
+    const supabase = getSupabase()
+
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
 
@@ -19,7 +27,6 @@ export function useUser() {
           .select('*')
           .eq('id', session.user.id)
           .single()
-
         setUser(data)
       }
       setLoading(false)
@@ -28,14 +35,13 @@ export function useUser() {
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         if (session?.user) {
           const { data } = await supabase
             .from('users')
             .select('*')
             .eq('id', session.user.id)
             .single()
-
           setUser(data)
         } else {
           setUser(null)
