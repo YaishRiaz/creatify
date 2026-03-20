@@ -2,11 +2,14 @@ package models
 
 import "time"
 
+// ViewSnapshot matches the view_snapshots table schema.
+// Fields align with what the frontend queries via Supabase.
 type ViewSnapshot struct {
-	ID          string    `json:"id" db:"id"`
-	TaskID      string    `json:"task_id" db:"task_id"`
-	ViewCount   int64     `json:"view_count" db:"view_count"`
-	LikeCount   int64     `json:"like_count" db:"like_count"`
-	CommentCount int64    `json:"comment_count" db:"comment_count"`
-	CapturedAt  time.Time `json:"captured_at" db:"captured_at"`
+	ID              string    `json:"id" db:"id"`
+	TaskID          string    `json:"task_id" db:"task_id"`
+	ViewsAtSnapshot int64     `json:"views_at_snapshot" db:"views_at_snapshot"`
+	DeltaViews      int64     `json:"delta_views" db:"delta_views"`
+	EarningsAdded   float64   `json:"earnings_added" db:"earnings_added"`
+	FraudScore      int       `json:"fraud_score" db:"fraud_score"`
+	SnapshottedAt   time.Time `json:"snapshotted_at" db:"snapshotted_at"`
 }
