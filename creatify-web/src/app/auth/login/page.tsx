@@ -52,7 +52,7 @@ export default function LoginPage() {
   const onSubmit = async (data: FormData) => {
     setServerError(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
     })
@@ -62,9 +62,7 @@ export default function LoginPage() {
       return
     }
 
-    // Get role from users table
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
+    if (!authData.user) {
       setServerError('Something went wrong. Please try again.')
       return
     }
@@ -72,13 +70,16 @@ export default function LoginPage() {
     const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', authData.user.id)
       .single()
 
     if (userData?.role === 'brand') router.push('/brand/dashboard')
     else if (userData?.role === 'creator') router.push('/creator/dashboard')
     else if (userData?.role === 'admin') router.push('/admin/dashboard')
-    else router.push('/')
+    else {
+      // Account exists in auth but has no users row (e.g. created via Supabase dashboard)
+      setServerError('Account setup is incomplete. Please sign up to create your profile.')
+    }
   }
 
   return (

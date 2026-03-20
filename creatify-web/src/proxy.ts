@@ -25,12 +25,12 @@ export async function proxy(req: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = req.nextUrl
 
   // Not logged in — block protected routes
-  if (!session) {
+  if (!user) {
     if (
       pathname.startsWith('/brand') ||
       pathname.startsWith('/creator') ||
@@ -42,13 +42,13 @@ export async function proxy(req: NextRequest) {
 
   // Logged in — redirect away from auth pages based on role
   if (
-    session &&
+    user &&
     (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))
   ) {
     const { data: userData } = await supabase
       .from('users')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (userData?.role === 'brand') {

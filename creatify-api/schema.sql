@@ -247,3 +247,16 @@ CREATE POLICY "creator_own_payouts" ON payouts
 -- notifications: users see their own
 CREATE POLICY "own_notifications" ON notifications
   FOR ALL USING (user_id::text = auth.uid()::text);
+
+-- ─── GRANTS ──────────────────────────────────────────────────────────────────
+-- Required when tables are created via raw SQL (not Supabase dashboard UI)
+GRANT SELECT, INSERT, UPDATE, DELETE ON users TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON creator_profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON campaigns TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON campaign_assets TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON tasks TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON view_snapshots TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON payouts TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON escrow_transactions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO authenticated;
