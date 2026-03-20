@@ -119,3 +119,14 @@ export interface AuthFormData {
   company_name?: string
   nic_number?: string
 }
+
+export interface AuditLog {
+  id: string
+  admin_user_id: string
+  action: string
+  entity_type: string
+  entity_id: string
+  details: Record<string, unknown>
+  created_at: string
+  admin?: { full_name: string; email: string }
+}
