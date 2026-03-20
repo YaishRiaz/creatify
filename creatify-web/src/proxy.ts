@@ -2,8 +2,33 @@ import { createServerClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+function applySecurityHeaders(res: NextResponse, supabaseUrl: string) {
+  res.headers.set('X-Frame-Options', 'DENY')
+  res.headers.set('X-Content-Type-Options', 'nosniff')
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  res.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      `connect-src 'self' ${supabaseUrl} https://api.apify.com https://www.googleapis.com`,
+      "font-src 'self' https://fonts.gstatic.com",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ')
+  )
+}
+
 export async function proxy(req: NextRequest) {
   const res = NextResponse.next()
+
+  // Apply security headers to every response
+  applySecurityHeaders(res, process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

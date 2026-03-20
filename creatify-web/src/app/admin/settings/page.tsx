@@ -58,10 +58,19 @@ export default function AdminSettingsPage() {
     setPollLoading(true)
     setPollStatus('idle')
     try {
+      const supabase = createSupabaseClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) {
+        setPollStatus('error')
+        return
+      }
       const res = await fetch('/api/poll/trigger', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: process.env.NEXT_PUBLIC_POLL_SECRET ?? '' }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       })
       if (res.ok) {
         setPollStatus('success')
