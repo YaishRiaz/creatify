@@ -6,9 +6,25 @@ import { calculateFraudScore } from '@/lib/fraud'
 import { getTikTokViews, getInstagramViews, getFacebookViews } from '@/lib/apify'
 import { getYouTubeViews, extractYouTubeVideoId } from '@/lib/youtube'
 
+// Constant-time string comparison to prevent timing attacks.
+// Works in edge runtime (no Node.js crypto required).
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder()
+  const aBytes = enc.encode(a)
+  const bBytes = enc.encode(b)
+  // Always iterate the longer length so duration doesn't leak length difference
+  const len = Math.max(aBytes.length, bBytes.length)
+  let diff = aBytes.length ^ bBytes.length
+  for (let i = 0; i < len; i++) {
+    diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0)
+  }
+  return diff === 0
+}
+
 function isAuthorized(req: NextRequest): boolean {
-  const secret = req.headers.get('x-poll-secret')
-  return secret === process.env.POLL_SECRET
+  const secret = req.headers.get('x-poll-secret') ?? ''
+  const expected = process.env.POLL_SECRET ?? ''
+  return expected.length > 0 && timingSafeEqual(secret, expected)
 }
 
 export async function POST(req: NextRequest) {
