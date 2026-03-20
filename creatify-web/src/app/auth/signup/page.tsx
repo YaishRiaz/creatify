@@ -225,12 +225,18 @@ function DetailsForm({
         if (creatorError) throw creatorError
       }
 
-      // 4. Redirect to dashboard
+      // 4. Redirect — if session is null, email confirmation is still required
+      if (!authData.session) {
+        setServerError('Account created! Check your email to confirm before logging in. (If you hit rate limits, ask your admin to confirm via SQL.)')
+        return
+      }
       router.push(role === 'brand' ? '/brand/dashboard' : '/creator/dashboard')
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
       if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')) {
         setServerError('An account with this email already exists. Login instead.')
+      } else if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many')) {
+        setServerError('Email rate limit reached. Wait 1 hour or ask your admin to confirm your account via SQL.')
       } else if (msg.toLowerCase().includes('password should be at least')) {
         setServerError('Password must be at least 8 characters.')
       } else if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {

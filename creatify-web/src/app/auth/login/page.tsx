@@ -26,7 +26,7 @@ function mapAuthError(msg: string): string {
     return 'Incorrect email or password.'
   }
   if (lower.includes('email not confirmed')) {
-    return 'Please verify your email before logging in.'
+    return 'Email not confirmed. Run this SQL in Supabase: UPDATE auth.users SET email_confirmed_at = now() WHERE email_confirmed_at IS NULL;'
   }
   if (lower.includes('too many requests')) {
     return 'Too many attempts. Please wait a moment and try again.'
