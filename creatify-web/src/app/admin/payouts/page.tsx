@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Copy, Download } from 'lucide-react'
 import { format } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
@@ -14,7 +13,6 @@ import ConfirmModal from '@/components/admin/ConfirmModal'
 import StatCard from '@/components/admin/StatCard'
 import { Wallet, CheckCircle, XCircle, Clock } from 'lucide-react'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function formatLKR(n: number) {
   return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -327,7 +325,7 @@ export default function PayoutsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className={`${syne.className} text-3xl font-bold text-white`}>Payouts</h1>
+          <h1 className="font-syne text-3xl font-bold text-white">Payouts</h1>
           <p className="text-zinc-500 text-sm mt-1">Manage creator payout requests</p>
         </div>
         <div className="flex gap-3">
@@ -437,7 +435,7 @@ export default function PayoutsPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center pt-20 px-4">
           <div className="bg-[#111111] border border-zinc-800 p-8 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className={`${syne.className} text-xl font-bold text-white`}>Payout Details</h2>
+              <h2 className="font-syne text-xl font-bold text-white">Payout Details</h2>
               <button onClick={() => setModalType(null)} className="text-zinc-500 hover:text-white">✕</button>
             </div>
             <div className="space-y-4">

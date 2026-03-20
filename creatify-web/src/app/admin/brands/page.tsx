@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
@@ -12,7 +11,6 @@ import DataTable from '@/components/admin/DataTable'
 import AdminBadge from '@/components/admin/AdminBadge'
 import ConfirmModal from '@/components/admin/ConfirmModal'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function formatLKR(n: number) {
   return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -195,7 +193,7 @@ export default function BrandsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-bold text-white`}>Brands</h1>
+        <h1 className="font-syne text-3xl font-bold text-white">Brands</h1>
         <p className="text-zinc-500 text-sm mt-1">Manage brand accounts and campaigns</p>
       </div>
 

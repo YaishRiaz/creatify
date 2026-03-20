@@ -3,15 +3,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { Syne, DM_Sans } from 'next/font/google'
 import { ChevronLeft, Eye, Users, Wallet, TrendingDown } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { formatNumber, formatLKR, formatDate, daysBetween } from '@/lib/utils'
 import type { Campaign, Task } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 const STATUS_BADGE: Record<string, string> = {
   draft: 'bg-zinc-800 text-zinc-400',
@@ -102,7 +99,7 @@ export default function CampaignDetailPage() {
 
   if (userLoading || loading) {
     return (
-      <div className={`${dmSans.className} animate-pulse`}>
+      <div className="font-sans animate-pulse">
         <div className="h-6 w-32 bg-zinc-800/50 rounded mb-6" />
         <div className="h-10 w-64 bg-zinc-800/50 rounded mb-4" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -114,7 +111,7 @@ export default function CampaignDetailPage() {
 
   if (error || !campaign) {
     return (
-      <div className={dmSans.className}>
+      <div className="font-sans">
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-4">{error ?? 'Not found'}</div>
         <Link href="/brand/campaigns" className="text-zinc-400 hover:text-white text-sm transition-colors">← Back to Campaigns</Link>
       </div>
@@ -131,7 +128,7 @@ export default function CampaignDetailPage() {
     : null
 
   return (
-    <div className={dmSans.className}>
+    <div className="font-sans">
       {/* Back + Header */}
       <Link href="/brand/campaigns" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors mb-4">
         <ChevronLeft size={16} />
@@ -140,7 +137,7 @@ export default function CampaignDetailPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>{campaign.title}</h1>
+          <h1 className="font-syne text-3xl font-extrabold text-white">{campaign.title}</h1>
           <span className={`text-xs px-2.5 py-1 capitalize ${STATUS_BADGE[campaign.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
             {campaign.status.replace('_', ' ')}
           </span>
@@ -167,7 +164,7 @@ export default function CampaignDetailPage() {
           <div key={label} className="bg-[#111111] border border-zinc-800 p-5 flex flex-col gap-2">
             <div className="flex items-start justify-between">
               <div>
-                <p className={`${syne.className} text-2xl font-extrabold text-white`}>{value}</p>
+                <p className="font-syne text-2xl font-extrabold text-white">{value}</p>
                 <p className="text-xs text-zinc-400 mt-1">{label}</p>
               </div>
               <div className={`w-9 h-9 ${bg} flex items-center justify-center shrink-0`}>
@@ -197,7 +194,7 @@ export default function CampaignDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Left: Brief */}
         <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-5">
-          <h2 className={`${syne.className} font-bold text-white`}>Campaign Brief</h2>
+          <h2 className="font-syne font-bold text-white">Campaign Brief</h2>
           {campaign.brief && (
             <div>
               <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Brief</p>
@@ -242,7 +239,7 @@ export default function CampaignDetailPage() {
 
         {/* Right: Info */}
         <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-5">
-          <h2 className={`${syne.className} font-bold text-white`}>Campaign Info</h2>
+          <h2 className="font-syne font-bold text-white">Campaign Info</h2>
           <div className="flex flex-col gap-4">
             <div>
               <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Payout Rate</p>
@@ -276,7 +273,7 @@ export default function CampaignDetailPage() {
       {/* Submissions table */}
       <div className="bg-[#111111] border border-zinc-800">
         <div className="px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
-          <h2 className={`${syne.className} font-bold text-white text-lg`}>Creator Submissions</h2>
+          <h2 className="font-syne font-bold text-white text-lg">Creator Submissions</h2>
           <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{tasks.length}</span>
         </div>
 

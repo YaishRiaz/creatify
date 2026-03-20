@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Syne, DM_Sans } from 'next/font/google'
 import {
   Building2,
   Sparkles,
@@ -19,8 +18,6 @@ import {
 import { createSupabaseClient } from '@/lib/supabase'
 import type { UserRole } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 const schema = z.object({
   email: z.string().email('Invalid email address'),
@@ -57,14 +54,14 @@ function RoleSelection({ onSelect }: { onSelect: (role: UserRole) => void }) {
         <div className="text-center mb-12">
           <Link
             href="/"
-            className={`${syne.className} text-2xl font-extrabold text-[#6C47FF]`}
+            className="font-syne text-2xl font-extrabold text-[#6C47FF]"
           >
             Creatify
           </Link>
-          <h1 className={`${syne.className} font-bold text-3xl md:text-4xl text-white mt-6 mb-3`}>
+          <h1 className="font-syne font-bold text-3xl md:text-4xl text-white mt-6 mb-3">
             Create your account
           </h1>
-          <p className={`${dmSans.className} text-zinc-400`}>
+          <p className="font-sans text-zinc-400">
             Choose your role to get started
           </p>
         </div>
@@ -77,10 +74,10 @@ function RoleSelection({ onSelect }: { onSelect: (role: UserRole) => void }) {
               <Building2 size={28} className="text-[#6C47FF]" />
             </div>
             <div>
-              <h2 className={`${syne.className} font-bold text-xl text-white mb-2`}>
+              <h2 className="font-syne font-bold text-xl text-white mb-2">
                 I&apos;m a Brand
               </h2>
-              <p className={`${dmSans.className} text-sm text-zinc-400 leading-relaxed`}>
+              <p className="font-sans text-sm text-zinc-400 leading-relaxed">
                 Fund campaigns and get authentic content from real creators
               </p>
             </div>
@@ -106,10 +103,10 @@ function RoleSelection({ onSelect }: { onSelect: (role: UserRole) => void }) {
               <Sparkles size={28} className="text-[#00E5A0]" />
             </div>
             <div>
-              <h2 className={`${syne.className} font-bold text-xl text-white mb-2`}>
+              <h2 className="font-syne font-bold text-xl text-white mb-2">
                 I&apos;m a Creator
               </h2>
-              <p className={`${dmSans.className} text-sm text-zinc-400 leading-relaxed`}>
+              <p className="font-sans text-sm text-zinc-400 leading-relaxed">
                 Post content, submit your URL, earn money per view — no follower minimum
               </p>
             </div>
@@ -130,7 +127,7 @@ function RoleSelection({ onSelect }: { onSelect: (role: UserRole) => void }) {
           </div>
         </div>
 
-        <p className={`${dmSans.className} text-center text-sm text-zinc-500 mt-8`}>
+        <p className="font-sans text-center text-sm text-zinc-500 mt-8">
           Already have an account?{' '}
           <Link href="/auth/login" className="text-[#6C47FF] hover:text-white transition-colors">
             Log in
@@ -239,7 +236,7 @@ function DetailsForm({
           </button>
           <Link
             href="/"
-            className={`${syne.className} text-lg font-extrabold text-[#6C47FF]`}
+            className="font-syne text-lg font-extrabold text-[#6C47FF]"
           >
             Creatify
           </Link>
@@ -254,10 +251,10 @@ function DetailsForm({
           {isBrand ? 'Brand Account' : 'Creator Account'}
         </div>
 
-        <h1 className={`${syne.className} font-bold text-2xl md:text-3xl text-white mb-1`}>
+        <h1 className="font-syne font-bold text-2xl md:text-3xl text-white mb-1">
           Complete your profile
         </h1>
-        <p className={`${dmSans.className} text-sm text-zinc-400 mb-8`}>
+        <p className="font-sans text-sm text-zinc-400 mb-8">
           Just a few more details to get you started.
         </p>
 
@@ -407,7 +404,7 @@ function DetailsForm({
           </button>
         </form>
 
-        <p className={`${dmSans.className} text-center text-sm text-zinc-500 mt-6`}>
+        <p className="font-sans text-center text-sm text-zinc-500 mt-6">
           Already have an account?{' '}
           <Link href="/auth/login" className="text-[#6C47FF] hover:text-white transition-colors">
             Log in

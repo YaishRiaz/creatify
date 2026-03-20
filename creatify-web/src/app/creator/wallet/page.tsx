@@ -1,15 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Loader2 } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { useToast } from '@/components/shared/Toast'
 import { formatDate } from '@/lib/utils'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface CreatorProfile {
   id: string
@@ -133,7 +130,7 @@ export default function CreatorWalletPage() {
 
   if (loading || userLoading) {
     return (
-      <div className={`${dmSans.className} animate-pulse flex flex-col gap-6`}>
+      <div className="font-sans animate-pulse flex flex-col gap-6">
         <div className="h-40 bg-zinc-800/50 rounded" />
         <div className="h-64 bg-zinc-800/50 rounded" />
       </div>
@@ -145,14 +142,14 @@ export default function CreatorWalletPage() {
   const canCashout = walletBalance >= MIN_CASHOUT
 
   return (
-    <div className={dmSans.className}>
-      <h1 className={`${syne.className} text-3xl font-extrabold text-white mb-8`}>Wallet</h1>
+    <div className="font-sans">
+      <h1 className="font-syne text-3xl font-extrabold text-white mb-8">Wallet</h1>
 
       {/* Balance hero */}
       <div className="bg-[#111111] border border-zinc-800 p-6 md:p-8 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">Available to Cash Out</p>
-          <p className={`${syne.className} text-4xl md:text-5xl font-extrabold text-[#00E5A0] break-all`}>
+          <p className="font-syne text-4xl md:text-5xl font-extrabold text-[#00E5A0] break-all">
             LKR {walletBalance.toLocaleString('en-LK')}
           </p>
           {!canCashout && (
@@ -163,7 +160,7 @@ export default function CreatorWalletPage() {
         </div>
         <div className="text-right md:border-l md:border-zinc-800 md:pl-8">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Lifetime Earned</p>
-          <p className={`${syne.className} text-2xl font-extrabold text-zinc-300`}>
+          <p className="font-syne text-2xl font-extrabold text-zinc-300">
             LKR {totalEarned.toLocaleString('en-LK')}
           </p>
         </div>
@@ -172,7 +169,7 @@ export default function CreatorWalletPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Cashout form */}
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h2 className={`${syne.className} font-bold text-white mb-1`}>Request Cashout</h2>
+          <h2 className="font-syne font-bold text-white mb-1">Request Cashout</h2>
           <p className="text-sm text-zinc-500 mb-5">Minimum LKR {MIN_CASHOUT}. Processed within 3–5 business days.</p>
 
           {!canCashout ? (
@@ -243,7 +240,7 @@ export default function CreatorWalletPage() {
 
         {/* Info */}
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h2 className={`${syne.className} font-bold text-white mb-4`}>How Payouts Work</h2>
+          <h2 className="font-syne font-bold text-white mb-4">How Payouts Work</h2>
           <ul className="flex flex-col gap-3 text-sm text-zinc-400">
             {[
               'Views are tracked every few hours by our system.',
@@ -265,7 +262,7 @@ export default function CreatorWalletPage() {
       {/* Earnings breakdown */}
       {earningTasks.length > 0 && (
         <div className="mb-8">
-          <h2 className={`${syne.className} font-bold text-white text-lg mb-4`}>Earnings Breakdown</h2>
+          <h2 className="font-syne font-bold text-white text-lg mb-4">Earnings Breakdown</h2>
           <div className="bg-[#111111] border border-zinc-800 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -301,7 +298,7 @@ export default function CreatorWalletPage() {
                   <td className="px-5 py-3 text-right text-zinc-300">
                     {earningTasks.reduce((s, t) => s + (t.total_views ?? 0), 0).toLocaleString('en-LK')}
                   </td>
-                  <td className={`${syne.className} px-5 py-3 text-right font-bold text-[#00E5A0]`}>
+                  <td className="font-syne px-5 py-3 text-right font-bold text-[#00E5A0]">
                     LKR {earningTasks.reduce((s, t) => s + (t.total_earned ?? 0), 0).toLocaleString('en-LK')}
                   </td>
                 </tr>
@@ -313,7 +310,7 @@ export default function CreatorWalletPage() {
 
       {/* Payout history */}
       <div>
-        <h2 className={`${syne.className} font-bold text-white text-lg mb-4`}>Payout History</h2>
+        <h2 className="font-syne font-bold text-white text-lg mb-4">Payout History</h2>
         {payouts.length === 0 ? (
           <div className="bg-[#111111] border border-zinc-800 p-8 text-center">
             <p className="text-zinc-500 text-sm">No cashout requests yet.</p>

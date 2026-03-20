@@ -12,11 +12,9 @@ import {
   Menu,
   X,
 } from 'lucide-react'
-import { Syne } from 'next/font/google'
 import { useUser } from '@/hooks/useUser'
 import { createSupabaseClient } from '@/lib/supabase'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 const navLinks = [
   { label: 'Dashboard', href: '/brand/dashboard', icon: LayoutDashboard },
@@ -68,7 +66,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
     <div className="flex flex-col h-full">
       {/* Wordmark */}
       <div className="px-6 py-6 border-b border-zinc-800">
-        <Link href="/" className={`${syne.className} text-xl font-extrabold text-[#6C47FF]`}>
+        <Link href="/" className="font-syne text-xl font-extrabold text-[#6C47FF]">
           Creatify
         </Link>
       </div>
@@ -126,7 +124,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
 
       {/* Mobile header */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#111111] border-b border-zinc-800 px-4 h-14 flex items-center justify-between">
-        <Link href="/" className={`${syne.className} text-lg font-extrabold text-[#6C47FF]`}>
+        <Link href="/" className="font-syne text-lg font-extrabold text-[#6C47FF]">
           Creatify
         </Link>
         <button

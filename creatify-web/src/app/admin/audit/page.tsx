@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Search, ChevronDown, ChevronRight } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
@@ -10,7 +9,6 @@ import { createSupabaseClient } from '@/lib/supabase'
 import AdminBadge from '@/components/admin/AdminBadge'
 import type { AuditLog } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 const ENTITY_TYPES = ['all', 'task', 'creator', 'campaign', 'payout', 'brand']
 
@@ -83,7 +81,7 @@ export default function AuditLogPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-bold text-white`}>Audit Log</h1>
+        <h1 className="font-syne text-3xl font-bold text-white">Audit Log</h1>
         <p className="text-zinc-500 text-sm mt-1">All admin actions are recorded here</p>
       </div>
 

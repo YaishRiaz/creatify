@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Search, X, Clock } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
@@ -11,8 +10,6 @@ import OnboardingGate from '@/components/creator/OnboardingGate'
 import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
 import type { Campaign } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 interface CampaignWithMeta extends Campaign {
   brand: { company_name: string; logo_url: string | null } | null
@@ -107,9 +104,9 @@ export default function BrowseCampaignsPage() {
 
   return (
     <OnboardingGate creatorProfileId={creatorProfileId}>
-    <div className={dmSans.className}>
+    <div className="font-sans">
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>Browse Campaigns</h1>
+        <h1 className="font-syne text-3xl font-extrabold text-white">Browse Campaigns</h1>
         <p className="text-zinc-500 text-sm mt-1">
           {loading ? '—' : `${campaigns.length} campaigns paying right now`}
         </p>
@@ -172,7 +169,7 @@ export default function BrowseCampaignsPage() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Search size={64} className="text-zinc-700 mb-4" />
-          <p className={`${syne.className} text-xl font-bold text-white mb-2`}>No campaigns match your filters</p>
+          <p className="font-syne text-xl font-bold text-white mb-2">No campaigns match your filters</p>
           <button
             onClick={() => { setPlatforms([]); setSearch('') }}
             className="text-sm text-[#6C47FF] hover:text-white transition-colors"
@@ -205,7 +202,7 @@ export default function BrowseCampaignsPage() {
                   </div>
                 </div>
 
-                <h3 className={`${syne.className} text-lg font-bold text-white line-clamp-2 leading-tight`}>{c.title}</h3>
+                <h3 className="font-syne text-lg font-bold text-white line-clamp-2 leading-tight">{c.title}</h3>
 
                 {/* Platform badges */}
                 <div className="flex flex-wrap gap-1">
@@ -216,7 +213,7 @@ export default function BrowseCampaignsPage() {
 
                 {/* Payout highlight */}
                 <div>
-                  <p className={`${syne.className} text-3xl font-extrabold text-[#00E5A0]`}>
+                  <p className="font-syne text-3xl font-extrabold text-[#00E5A0]">
                     {formatLKR(c.payout_rate)}
                   </p>
                   <p className="text-xs text-zinc-500">per 1,000 views</p>

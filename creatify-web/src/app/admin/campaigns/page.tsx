@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Search } from 'lucide-react'
 import { format } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
@@ -12,7 +11,6 @@ import DataTable from '@/components/admin/DataTable'
 import AdminBadge from '@/components/admin/AdminBadge'
 import ConfirmModal from '@/components/admin/ConfirmModal'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function formatLKR(n: number) {
   return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -286,7 +284,7 @@ export default function CampaignsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className={`${syne.className} text-3xl font-bold text-white`}>Campaigns</h1>
+        <h1 className="font-syne text-3xl font-bold text-white">Campaigns</h1>
         <p className="text-zinc-500 text-sm mt-1">Manage all platform campaigns</p>
       </div>
 
@@ -392,7 +390,7 @@ export default function CampaignsPage() {
           <div className="bg-[#111111] border border-zinc-800 p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className={`${syne.className} text-xl font-bold text-white`}>{detailCampaign.title}</h2>
+                <h2 className="font-syne text-xl font-bold text-white">{detailCampaign.title}</h2>
                 <p className="text-sm text-zinc-500 mt-1">{detailCampaign.brand?.company_name}</p>
               </div>
               <button onClick={() => setDetailCampaign(null)} className="text-zinc-500 hover:text-white">✕</button>

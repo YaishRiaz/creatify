@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev'
 
 if (process.env.NODE_ENV === 'development') {
@@ -6,7 +6,9 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
+}
 
-export default nextConfig;
+export default nextConfig

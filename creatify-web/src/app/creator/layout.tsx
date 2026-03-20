@@ -6,11 +6,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Search, ListTodo, Wallet, User, LogOut, Menu, X,
 } from 'lucide-react'
-import { Syne } from 'next/font/google'
 import { useUser } from '@/hooks/useUser'
 import { createSupabaseClient } from '@/lib/supabase'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 const navLinks = [
   { label: 'Dashboard', href: '/creator/dashboard', icon: LayoutDashboard },
@@ -70,7 +68,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="px-6 py-6 border-b border-zinc-800">
-        <Link href="/" className={`${syne.className} text-xl font-extrabold text-[#6C47FF]`}>
+        <Link href="/" className="font-syne text-xl font-extrabold text-[#6C47FF]">
           Creatify
         </Link>
       </div>
@@ -99,7 +97,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
       {/* Wallet mini widget */}
       <div className="px-4 py-4 border-t border-zinc-800">
         <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Available Balance</p>
-        <p className={`${syne.className} text-xl font-extrabold text-[#00E5A0] mb-2`}>
+        <p className="font-syne text-xl font-extrabold text-[#00E5A0] mb-2">
           {walletBalance !== null ? `LKR ${walletBalance.toLocaleString('en-LK')}` : '—'}
         </p>
         <Link
@@ -139,7 +137,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
       </aside>
 
       <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#111111] border-b border-zinc-800 px-4 h-14 flex items-center justify-between">
-        <Link href="/" className={`${syne.className} text-lg font-extrabold text-[#6C47FF]`}>
+        <Link href="/" className="font-syne text-lg font-extrabold text-[#6C47FF]">
           Creatify
         </Link>
         <button

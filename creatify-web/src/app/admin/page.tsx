@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Users, Megaphone, AlertTriangle, Wallet, Eye, DollarSign, UserCheck, Building2 } from 'lucide-react'
 import { formatDistanceToNow, format, subDays } from 'date-fns'
 import {
@@ -22,7 +21,6 @@ import StatCard from '@/components/admin/StatCard'
 import AdminBadge from '@/components/admin/AdminBadge'
 import type { AuditLog } from '@/types'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function formatLKR(n: number) {
   return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -175,7 +173,7 @@ export default function AdminOverviewPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className={`${syne.className} text-3xl font-bold text-white`}>Overview</h1>
+        <h1 className="font-syne text-3xl font-bold text-white">Overview</h1>
         <p className="text-zinc-500 text-sm mt-1">Platform health at a glance</p>
       </div>
 
@@ -251,7 +249,7 @@ export default function AdminOverviewPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h3 className={`${syne.className} text-base font-bold text-white mb-4`}>Signups Over Time</h3>
+          <h3 className="font-syne text-base font-bold text-white mb-4">Signups Over Time</h3>
           {!dataLoading && (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={signupData}>
@@ -277,7 +275,7 @@ export default function AdminOverviewPage() {
         </div>
 
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h3 className={`${syne.className} text-base font-bold text-white mb-4`}>Views Tracked Per Day</h3>
+          <h3 className="font-syne text-base font-bold text-white mb-4">Views Tracked Per Day</h3>
           {!dataLoading && (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={viewData}>
@@ -295,7 +293,7 @@ export default function AdminOverviewPage() {
       {/* Recent Activity */}
       <div className="bg-[#111111] border border-zinc-800">
         <div className="p-5 border-b border-zinc-800">
-          <h3 className={`${syne.className} text-base font-bold text-white`}>Recent Activity</h3>
+          <h3 className="font-syne text-base font-bold text-white">Recent Activity</h3>
         </div>
         {recentActivity.length === 0 ? (
           <p className="text-zinc-500 text-sm p-8 text-center">No recent activity</p>
