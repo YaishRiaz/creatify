@@ -182,61 +182,37 @@ function DetailsForm({
     }
 
     try {
-      // 1. Create Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. Create user via server API route (uses service role — no email sent)
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          full_name: data.full_name,
+          phone: data.phone || null,
+          role,
+          company_name: data.company_name || null,
+          industry: data.industry || null,
+          nic_number: data.nic_number || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to create account')
+
+      // 2. Sign in immediately (user is pre-confirmed, no email needed)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       })
-      if (authError) throw authError
-      if (!authData.user) throw new Error('Failed to create account')
+      if (signInError) throw signInError
 
-      const authUser = authData.user
-
-      // 2. Insert into users table
-      const { error: userError } = await supabase.from('users').insert({
-        id: authUser.id,
-        email: data.email,
-        phone: data.phone || null,
-        role,
-        full_name: data.full_name,
-        is_verified: false,
-      })
-      if (userError) throw userError
-
-      // 3a. Brand profile
-      if (role === 'brand') {
-        const { error: brandError } = await supabase.from('brand_profiles').insert({
-          user_id: authUser.id,
-          company_name: data.company_name,
-          industry: data.industry || null,
-        })
-        if (brandError) throw brandError
-      }
-
-      // 3b. Creator profile
-      if (role === 'creator') {
-        const { error: creatorError } = await supabase.from('creator_profiles').insert({
-          user_id: authUser.id,
-          nic_number: data.nic_number,
-          platforms: {},
-          wallet_balance: 0,
-          total_earned: 0,
-        })
-        if (creatorError) throw creatorError
-      }
-
-      // 4. Redirect — if session is null, email confirmation is still required
-      if (!authData.session) {
-        setServerError('Account created! Check your email to confirm before logging in. (If you hit rate limits, ask your admin to confirm via SQL.)')
-        return
-      }
+      // 3. Redirect
       router.push(role === 'brand' ? '/brand/dashboard' : '/creator/dashboard')
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
-      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')) {
+      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('already exists')) {
         setServerError('An account with this email already exists. Login instead.')
-      } else if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many')) {
-        setServerError('Email rate limit reached. Wait 1 hour or ask your admin to confirm your account via SQL.')
       } else if (msg.toLowerCase().includes('password should be at least')) {
         setServerError('Password must be at least 8 characters.')
       } else if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
