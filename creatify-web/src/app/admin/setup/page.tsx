@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Syne } from 'next/font/google'
 import { createSupabaseClient } from '@/lib/supabase'
-
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 export default function AdminSetupPage() {
   const [adminCount, setAdminCount] = useState<number | null>(null)
@@ -67,7 +64,7 @@ export default function AdminSetupPage() {
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center px-4">
       <div className="bg-[#111111] border border-zinc-800 p-10 max-w-md w-full text-center">
-        <h1 className={`${syne.className} text-2xl font-bold text-white mb-2`}>Admin Setup</h1>
+        <h1 className="font-syne text-2xl font-bold text-white mb-2">Admin Setup</h1>
 
         {adminCount !== null && adminCount > 0 && !success ? (
           <>

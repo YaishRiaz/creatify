@@ -2,7 +2,9 @@ import type { NextConfig } from 'next'
 import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev'
 
 if (process.env.NODE_ENV === 'development') {
-  await setupDevPlatform()
+  setupDevPlatform().catch(() => {
+    // Miniflare (workerd) may not be available in all dev environments; safe to ignore
+  })
 }
 
 const nextConfig: NextConfig = {

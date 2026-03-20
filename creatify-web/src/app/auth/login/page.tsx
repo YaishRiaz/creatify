@@ -6,12 +6,9 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Syne, DM_Sans } from 'next/font/google'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
-const dmSans = DM_Sans({ subsets: ['latin'] })
 
 const schema = z.object({
   email: z.string().email('Invalid email address'),
@@ -89,14 +86,14 @@ export default function LoginPage() {
         <div className="mb-8">
           <Link
             href="/"
-            className={`${syne.className} text-xl font-extrabold text-[#6C47FF] block mb-6`}
+            className="font-syne text-xl font-extrabold text-[#6C47FF] block mb-6"
           >
             Creatify
           </Link>
-          <h1 className={`${syne.className} font-bold text-3xl text-white mb-1`}>
+          <h1 className="font-syne font-bold text-3xl text-white mb-1">
             Welcome back.
           </h1>
-          <p className={`${dmSans.className} text-sm text-zinc-400`}>
+          <p className="font-sans text-sm text-zinc-400">
             Sign in to your account
           </p>
         </div>
@@ -179,7 +176,7 @@ export default function LoginPage() {
         </form>
 
         {/* Footer */}
-        <p className={`${dmSans.className} text-center text-sm text-zinc-500 mt-6`}>
+        <p className="font-sans text-center text-sm text-zinc-500 mt-6">
           Don&apos;t have an account?{' '}
           <Link href="/auth/signup" className="text-[#6C47FF] hover:text-white transition-colors">
             Sign up →

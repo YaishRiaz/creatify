@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { Search, ChevronDown, ChevronRight, ExternalLink, CheckSquare, Square } from 'lucide-react'
 import { format, formatDistanceToNow, differenceInDays } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
@@ -11,7 +10,6 @@ import { logAdminAction } from '@/lib/audit'
 import ConfirmModal from '@/components/admin/ConfirmModal'
 import AdminBadge from '@/components/admin/AdminBadge'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function maskNIC(nic: string | undefined): string {
   if (!nic || nic.length < 5) return nic ?? '—'
@@ -214,7 +212,7 @@ export default function FraudQueuePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className={`${syne.className} text-3xl font-bold text-white`}>Fraud Review Queue</h1>
+          <h1 className="font-syne text-3xl font-bold text-white">Fraud Review Queue</h1>
           <p className="text-zinc-500 text-sm mt-1">Tasks with automated fraud scores requiring review</p>
         </div>
         <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 text-sm font-medium">
