@@ -1,5 +1,8 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Eye, Zap, CheckCircle, Search } from 'lucide-react'
