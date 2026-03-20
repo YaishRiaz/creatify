@@ -7,6 +7,8 @@ import { Search, X, Clock } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { formatLKR, formatNumber } from '@/lib/utils'
+import OnboardingGate from '@/components/creator/OnboardingGate'
+import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
 import type { Campaign } from '@/types'
 
 const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
@@ -34,6 +36,7 @@ export default function BrowseCampaignsPage() {
   const { user, loading: userLoading } = useUser()
   const supabase = useMemo(() => createSupabaseClient(), [])
 
+  const [creatorProfileId, setCreatorProfileId] = useState<string | null>(null)
   const [campaigns, setCampaigns] = useState<CampaignWithMeta[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,12 +52,14 @@ export default function BrowseCampaignsPage() {
       const { data: profile } = await supabase
         .from('creator_profiles').select('id').eq('user_id', user.id).single()
       if (!profile) { setError('Profile not found.'); setLoading(false); return }
+      setCreatorProfileId(profile.id)
 
       const now = new Date().toISOString()
       const { data: campData, error: campErr } = await supabase
         .from('campaigns')
         .select('*, brand:brand_profiles(company_name, logo_url)')
         .eq('status', 'active')
+        .eq('is_onboarding', false)
         .gt('budget_remaining', 0)
         .lte('start_date', now)
         .gte('end_date', now)
@@ -98,7 +103,10 @@ export default function BrowseCampaignsPage() {
     return list
   }, [campaigns, platforms, sort, search])
 
+  if (!creatorProfileId) return null
+
   return (
+    <OnboardingGate creatorProfileId={creatorProfileId}>
     <div className={dmSans.className}>
       <div className="mb-6">
         <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>Browse Campaigns</h1>
@@ -251,5 +259,6 @@ export default function BrowseCampaignsPage() {
         </div>
       )}
     </div>
+    </OnboardingGate>
   )
 }
