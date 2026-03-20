@@ -65,37 +65,17 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // Logged in — redirect away from auth pages based on role
-  if (
-    user &&
-    (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))
-  ) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (userData?.role === 'brand') {
-      return NextResponse.redirect(new URL('/brand/dashboard', req.url))
-    }
-    if (userData?.role === 'creator') {
-      return NextResponse.redirect(new URL('/creator/dashboard', req.url))
-    }
-    if (userData?.role === 'admin') {
-      return NextResponse.redirect(new URL('/admin/dashboard', req.url))
-    }
-  }
-
   return res
 }
 
 export const config = {
+  // Only protect routes that require authentication.
+  // Auth pages (/auth/login, /auth/signup) are intentionally excluded —
+  // they are static pages and cannot have middleware lambdas in the Vercel
+  // build output. Logged-in users on auth pages are redirected client-side.
   matcher: [
     '/brand/:path*',
     '/creator/:path*',
     '/admin/:path*',
-    '/auth/login',
-    '/auth/signup',
   ],
 }

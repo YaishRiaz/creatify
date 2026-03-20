@@ -10,7 +10,7 @@ jobs:
   build-and-check:
     name: Lint, Type-check & Build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -36,10 +36,22 @@ jobs:
       - name: TypeScript type-check
         run: npx tsc --noEmit
 
-      - name: Build
+      - name: Build (Next.js)
         run: npm run build
         env:
-          # Supply dummy values so Next.js static analysis passes in CI
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          POLL_SECRET: ${{ secrets.POLL_SECRET }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+
+      - name: Build (Cloudflare Pages)
+        # Runs on Linux — @cloudflare/next-on-pages is not compatible with Windows.
+        # This step verifies the Cloudflare edge output builds correctly in CI.
+        run: npm run pages:build
+        env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
