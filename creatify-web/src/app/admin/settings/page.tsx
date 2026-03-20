@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Syne } from 'next/font/google'
 import { format } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
 import { createSupabaseClient } from '@/lib/supabase'
 import AdminBadge from '@/components/admin/AdminBadge'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 function buildPlatformCSV(campaigns: Record<string, unknown>[], tasks: Record<string, unknown>[]): string {
   const lines: string[] = [
@@ -103,14 +101,14 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className={`${syne.className} text-3xl font-bold text-white`}>Settings</h1>
+        <h1 className="font-syne text-3xl font-bold text-white">Settings</h1>
         <p className="text-zinc-500 text-sm mt-1">Platform configuration and admin tools</p>
       </div>
 
       <div className="space-y-6">
         {/* Platform Fee */}
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h2 className={`${syne.className} text-base font-bold text-white mb-3`}>Platform Fee</h2>
+          <h2 className="font-syne text-base font-bold text-white mb-3">Platform Fee</h2>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-zinc-300">Creator payout fee</p>
@@ -125,7 +123,7 @@ export default function AdminSettingsPage() {
 
         {/* Cashout Settings */}
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h2 className={`${syne.className} text-base font-bold text-white mb-3`}>Cashout Settings</h2>
+          <h2 className="font-syne text-base font-bold text-white mb-3">Cashout Settings</h2>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm text-zinc-400">Minimum cashout amount</p>
@@ -143,7 +141,7 @@ export default function AdminSettingsPage() {
 
         {/* Admin Account */}
         <div className="bg-[#111111] border border-zinc-800 p-6">
-          <h2 className={`${syne.className} text-base font-bold text-white mb-4`}>Your Admin Account</h2>
+          <h2 className="font-syne text-base font-bold text-white mb-4">Your Admin Account</h2>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs text-zinc-500 uppercase tracking-wider">Email</p>
@@ -170,7 +168,7 @@ export default function AdminSettingsPage() {
 
         {/* Danger Zone */}
         <div className="bg-red-950/20 border border-red-800/30 p-6">
-          <h2 className={`${syne.className} text-base font-bold text-red-400 mb-4`}>Danger Zone</h2>
+          <h2 className="font-syne text-base font-bold text-red-400 mb-4">Danger Zone</h2>
           <div className="space-y-6">
             <div className="flex items-start justify-between gap-6">
               <div>

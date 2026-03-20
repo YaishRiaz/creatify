@@ -1,8 +1,5 @@
 'use client'
 
-import { Syne } from 'next/font/google'
-
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 interface ConfirmModalProps {
   isOpen: boolean
@@ -37,7 +34,7 @@ export default function ConfirmModal({
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-start justify-center pt-32">
       <div className="bg-[#111111] border border-zinc-800 p-8 max-w-md w-full mx-4">
-        <h2 className={`${syne.className} text-xl font-bold text-white`}>{title}</h2>
+        <h2 className="font-syne text-xl font-bold text-white">{title}</h2>
         <div className="text-zinc-400 mt-2 mb-6 text-sm leading-relaxed">{description}</div>
         <div className="flex items-center justify-end gap-3">
           <button

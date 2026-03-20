@@ -1,8 +1,5 @@
 'use client'
 
-import { Syne } from 'next/font/google'
-
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 interface StatCardProps {
   label: string
@@ -35,7 +32,7 @@ export default function StatCard({ label, value, sub, icon, alert = false, onCli
       </div>
       <div className="min-w-0">
         <p className="text-xs text-zinc-500 uppercase tracking-wider">{label}</p>
-        <p className={`${syne.className} text-2xl font-extrabold mt-1 ${isAlert ? 'text-red-400' : 'text-white'}`}>
+        <p className={`font-syne text-2xl font-extrabold mt-1 ${isAlert ? 'text-red-400' : 'text-white'}`}>
           {value}
         </p>
         {sub && <p className="text-xs text-zinc-500 mt-1">{sub}</p>}

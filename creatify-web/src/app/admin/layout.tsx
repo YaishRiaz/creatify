@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Syne } from 'next/font/google'
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -18,7 +17,6 @@ import {
 import { useUser } from '@/hooks/useUser'
 import { createSupabaseClient } from '@/lib/supabase'
 
-const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
 
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Overview' },
@@ -84,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="fixed top-0 left-0 h-full w-64 bg-[#111111] border-r border-zinc-800 flex flex-col z-40">
         <div className="p-6 border-b border-zinc-800">
           <Link href="/admin">
-            <span className={`${syne.className} text-xl font-bold text-[#6C47FF]`}>Creatify</span>
+            <span className="font-syne text-xl font-bold text-[#6C47FF]">Creatify</span>
           </Link>
           <div className="bg-red-500/10 text-red-400 text-xs tracking-[0.2em] px-2 py-1 w-fit mt-1">
             ADMIN PANEL
