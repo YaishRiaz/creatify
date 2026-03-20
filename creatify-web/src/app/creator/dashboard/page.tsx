@@ -9,6 +9,7 @@ import { useUser } from '@/hooks/useUser'
 import { useToast } from '@/components/shared/Toast'
 import SubmitURLModal from '@/components/creator/SubmitURLModal'
 import { formatNumber, formatDate, getGreeting } from '@/lib/utils'
+import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
 import type { Task, Campaign } from '@/types'
 
 const syne = Syne({ subsets: ['latin'], weight: ['700', '800'] })
@@ -76,6 +77,7 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitTask, setSubmitTask] = useState<TaskWithCampaign | null>(null)
+  const [onboardingTask, setOnboardingTask] = useState<Task | null | undefined>(undefined)
 
   useEffect(() => {
     if (userLoading || !user) return
@@ -109,8 +111,12 @@ export default function CreatorDashboard() {
       }
 
       const { count } = await supabase
-        .from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active')
+        .from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('is_onboarding', false)
       setActiveCampaignCount(count ?? 0)
+
+      const { data: obTask } = await supabase
+        .from('tasks').select('*').eq('campaign_id', ONBOARDING_CAMPAIGN_ID).eq('creator_id', prof.id).maybeSingle()
+      setOnboardingTask(obTask as Task | null)
 
       setLoading(false)
     }
@@ -138,6 +144,39 @@ export default function CreatorDashboard() {
     <div className={dmSans.className}>
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-6">{error}</div>
+      )}
+
+      {/* Onboarding banner */}
+      {onboardingTask === null && (
+        <div className="bg-[#6C47FF]/5 border border-[#6C47FF]/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className={`${syne.className} font-bold text-white mb-1`}>🎬 One task before you start</p>
+            <p className="text-sm text-zinc-400">Post a video about Creatify to unlock all campaigns. Takes 5 minutes.</p>
+          </div>
+          <Link href="/creator/campaigns" className="text-sm bg-[#6C47FF] text-white px-5 py-2.5 hover:bg-[#5538ee] transition-colors shrink-0">
+            Complete Onboarding →
+          </Link>
+        </div>
+      )}
+      {onboardingTask?.status === 'accepted' && (
+        <div className="bg-amber-500/5 border border-amber-500/30 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className={`${syne.className} font-bold text-amber-300 mb-1`}>⚠ Submit your Creatify video URL</p>
+            <p className="text-sm text-zinc-400">You accepted the onboarding task. Post your video then submit the URL to unlock campaigns.</p>
+          </div>
+          <Link href="/creator/campaigns" className="text-sm bg-amber-500 text-black px-5 py-2.5 hover:bg-amber-400 transition-colors shrink-0 font-semibold">
+            Submit URL →
+          </Link>
+        </div>
+      )}
+      {onboardingTask?.status === 'submitted' && (
+        <div className="bg-blue-500/5 border border-blue-500/20 p-5 mb-6 flex items-center gap-4">
+          <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-white">Your Creatify video is under review</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Campaigns will unlock once our team verifies your video (within 24 hours).</p>
+          </div>
+        </div>
       )}
 
       {/* Header */}

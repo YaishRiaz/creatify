@@ -9,6 +9,7 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
 import { useToast } from '@/components/shared/Toast'
 import SubmitURLModal from '@/components/creator/SubmitURLModal'
+import OnboardingGate from '@/components/creator/OnboardingGate'
 import { formatLKR, formatNumber } from '@/lib/utils'
 import type { Campaign, Task } from '@/types'
 
@@ -39,6 +40,7 @@ export default function CreatorCampaignDetailPage() {
 
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null)
   const [creatorProfileId, setCreatorProfileId] = useState<string | null>(null)
+  const [profileLoaded, setProfileLoaded] = useState(false)
   const [existingTask, setExistingTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(false)
@@ -55,6 +57,7 @@ export default function CreatorCampaignDetailPage() {
         .from('creator_profiles').select('id').eq('user_id', user.id).single()
       if (!prof) { setLoading(false); return }
       setCreatorProfileId(prof.id)
+      setProfileLoaded(true)
 
       const { data: camp } = await supabase
         .from('campaigns')
@@ -114,7 +117,10 @@ export default function CreatorCampaignDetailPage() {
   const days = campaign.end_date ? daysLeft(campaign.end_date) : null
   const estimatedEarnings = Math.round((campaign.payout_rate * views) / 1000 * 100) / 100
 
+  if (!profileLoaded || !creatorProfileId) return null
+
   return (
+    <OnboardingGate creatorProfileId={creatorProfileId}>
     <div className={dmSans.className}>
       {/* Back */}
       <Link href="/creator/campaigns" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white mb-6 transition-colors">
@@ -348,5 +354,6 @@ export default function CreatorCampaignDetailPage() {
         />
       )}
     </div>
+    </OnboardingGate>
   )
 }
