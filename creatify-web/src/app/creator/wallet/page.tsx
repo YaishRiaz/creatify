@@ -17,6 +17,14 @@ interface CreatorProfile {
   total_earned: number
 }
 
+interface EarningTask {
+  id: string
+  platform: string
+  total_views: number
+  total_earned: number
+  campaign: { title: string; payout_rate: number } | null
+}
+
 interface Payout {
   id: string
   amount: number
@@ -43,6 +51,7 @@ export default function CreatorWalletPage() {
 
   const [profile, setProfile] = useState<CreatorProfile | null>(null)
   const [payouts, setPayouts] = useState<Payout[]>([])
+  const [earningTasks, setEarningTasks] = useState<EarningTask[]>([])
   const [loading, setLoading] = useState(true)
 
   // Cashout form
@@ -62,8 +71,16 @@ export default function CreatorWalletPage() {
         setProfile({ ...prof, wallet_balance: prof.wallet_balance ?? 0, total_earned: prof.total_earned ?? 0 })
 
         const { data: payoutData } = await supabase
-          .from('payouts').select('*').eq('creator_id', prof.id).order('created_at', { ascending: false })
+          .from('payouts').select('*').eq('creator_id', prof.id).order('requested_at', { ascending: false })
         setPayouts((payoutData ?? []) as Payout[])
+
+        const { data: taskData } = await supabase
+          .from('tasks')
+          .select('id, platform, total_views, total_earned, campaign:campaigns(title, payout_rate)')
+          .eq('creator_id', prof.id)
+          .gt('total_earned', 0)
+          .order('total_earned', { ascending: false })
+        setEarningTasks((taskData ?? []) as unknown as EarningTask[])
       }
       setLoading(false)
     }
@@ -96,8 +113,11 @@ export default function CreatorWalletPage() {
 
     if (error) { toast('Failed to submit cashout request. Please try again.', 'error'); return }
 
-    // Deduct from wallet locally while DB trigger handles it
-    setProfile((prev) => prev ? { ...prev, wallet_balance: Math.round((prev.wallet_balance - amt) * 100) / 100 } : null)
+    // Deduct from wallet balance in DB
+    const newBalance = Math.round((profile.wallet_balance - amt) * 100) / 100
+    await supabase.from('creator_profiles').update({ wallet_balance: newBalance }).eq('id', profile.id)
+
+    setProfile((prev) => prev ? { ...prev, wallet_balance: newBalance } : null)
     setPayouts((prev) => [{
       id: Date.now().toString(),
       amount: amt,
@@ -241,6 +261,55 @@ export default function CreatorWalletPage() {
           </ul>
         </div>
       </div>
+
+      {/* Earnings breakdown */}
+      {earningTasks.length > 0 && (
+        <div className="mb-8">
+          <h2 className={`${syne.className} font-bold text-white text-lg mb-4`}>Earnings Breakdown</h2>
+          <div className="bg-[#111111] border border-zinc-800 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800">
+                  <th className="text-left px-5 py-3 text-xs text-zinc-500 uppercase tracking-wider font-medium">Campaign</th>
+                  <th className="text-left px-5 py-3 text-xs text-zinc-500 uppercase tracking-wider font-medium">Platform</th>
+                  <th className="text-right px-5 py-3 text-xs text-zinc-500 uppercase tracking-wider font-medium">Views</th>
+                  <th className="text-right px-5 py-3 text-xs text-zinc-500 uppercase tracking-wider font-medium">Earned</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/50">
+                {earningTasks.map((t) => (
+                  <tr key={t.id}>
+                    <td className="px-5 py-3 text-zinc-300 max-w-[200px] truncate">
+                      {t.campaign?.title ?? '—'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`text-xs px-2 py-0.5 capitalize ${
+                        t.platform === 'tiktok' ? 'bg-pink-500/10 text-pink-400' :
+                        t.platform === 'instagram' ? 'bg-orange-500/10 text-orange-400' :
+                        t.platform === 'youtube' ? 'bg-red-500/10 text-red-400' :
+                        'bg-blue-500/10 text-blue-400'
+                      }`}>{t.platform}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right text-zinc-300">{(t.total_views ?? 0).toLocaleString('en-LK')}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-[#00E5A0]">LKR {(t.total_earned ?? 0).toLocaleString('en-LK')}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-zinc-700">
+                  <td className="px-5 py-3 text-zinc-400 text-xs uppercase tracking-wider" colSpan={2}>Total</td>
+                  <td className="px-5 py-3 text-right text-zinc-300">
+                    {earningTasks.reduce((s, t) => s + (t.total_views ?? 0), 0).toLocaleString('en-LK')}
+                  </td>
+                  <td className={`${syne.className} px-5 py-3 text-right font-bold text-[#00E5A0]`}>
+                    LKR {earningTasks.reduce((s, t) => s + (t.total_earned ?? 0), 0).toLocaleString('en-LK')}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Payout history */}
       <div>

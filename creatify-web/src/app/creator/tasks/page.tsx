@@ -103,7 +103,23 @@ export default function CreatorTasksPage() {
     <div className={dmSans.className}>
       <div className="mb-6">
         <h1 className={`${syne.className} text-3xl font-extrabold text-white`}>My Tasks</h1>
-        <p className="text-zinc-500 text-sm mt-1">{tasks.length} total tasks</p>
+        <p className="text-zinc-500 text-sm mt-1 flex flex-wrap gap-x-3">
+          <span>
+            <span className="text-white font-medium">
+              {tasks.filter((t) => ['accepted', 'submitted', 'tracking'].includes(t.status)).length}
+            </span> active
+          </span>
+          <span className="text-zinc-700">·</span>
+          <span>
+            <span className="text-white font-medium">
+              {tasks.filter((t) => t.status === 'completed').length}
+            </span> completed
+          </span>
+          <span className="text-zinc-700">·</span>
+          <span className="text-[#00E5A0] font-medium">
+            LKR {tasks.reduce((s, t) => s + (t.total_earned ?? 0), 0).toLocaleString('en-LK')} earned
+          </span>
+        </p>
       </div>
 
       {/* Tabs */}
