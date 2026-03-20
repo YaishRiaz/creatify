@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -12,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 
+	"creatify-api/internal/db"
 	"creatify-api/internal/handlers"
 	"creatify-api/internal/middleware"
 	"creatify-api/internal/workers"
@@ -25,34 +24,12 @@ func main() {
 	}
 
 	// ── Database ─────────────────────────────────────────────────────────────
-	var db *sql.DB
-	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
-		var err error
-		db, err = sql.Open("postgres", dbURL)
-		if err != nil {
-			log.Fatalf("Failed to open database connection: %v", err)
-		}
-		defer db.Close()
-
-		db.SetMaxOpenConns(20)
-		db.SetMaxIdleConns(5)
-		db.SetConnMaxLifetime(5 * time.Minute)
-
-		if err := db.Ping(); err != nil {
-			log.Fatalf("Failed to connect to database: %v", err)
-		}
-		log.Println("Database connected successfully")
-	} else {
-		log.Println("DATABASE_URL not set — running without database")
-	}
+	db.Connect()
+	defer db.Close()
 
 	// ── Polling worker ────────────────────────────────────────────────────────
-	if db != nil {
-		worker := workers.New(db)
-		go worker.Start()
-	} else {
-		log.Println("Polling worker disabled — no database configured")
-	}
+	worker := workers.New(db.DB)
+	go worker.Start()
 
 	// ── HTTP server ───────────────────────────────────────────────────────────
 	if os.Getenv("ENV") == "production" {
