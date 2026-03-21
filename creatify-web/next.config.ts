@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
-  optimizeFonts: false,
 }
 
 export default nextConfig
