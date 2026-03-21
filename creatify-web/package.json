@@ -4,12 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "build:worker": "next build && npx @opennextjs/cloudflare build",
     "dev": "next dev",
-    "start": "next start",
-    "lint": "eslint",
-    "preview": "next build && npx @opennextjs/cloudflare build && wrangler pages dev",
-    "deploy": "next build && npx @opennextjs/cloudflare build && wrangler pages deploy"
+    "start": "next start"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
