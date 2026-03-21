@@ -134,19 +134,32 @@ function HowItWorks() {
       n: "01",
       icon: <FileText size={18} />,
       title: "Set Up Your Campaign",
-      desc: "Write your brief, set your budget, define your payout rate per 1,000 views. Takes 5 minutes.",
+      bullets: [
+        "Write your brief and campaign requirements",
+        "Set your total budget",
+        "Define your payout rate per 1,000 views",
+        "Takes 5 minutes to go live",
+      ],
     },
     {
       n: "02",
       icon: <Users size={18} />,
       title: "Creators Do the Work",
-      desc: "Hundreds of real people post authentic content about your brand on TikTok, Instagram, YouTube and Facebook.",
+      bullets: [
+        "Hundreds of real people post about your brand",
+        "Authentic content on TikTok, Instagram, YouTube and Facebook",
+        "No agency, no middleman",
+      ],
     },
     {
       n: "03",
       icon: <TrendingUp size={18} />,
       title: "Pay Per View Delivered",
-      desc: "Your budget releases automatically as views come in. Campaign ends when budget is spent or deadline hits.",
+      bullets: [
+        "Budget releases automatically as views come in",
+        "Campaign ends when budget is spent or deadline hits",
+        "Only pay for views actually delivered",
+      ],
     },
   ];
 
@@ -178,12 +191,17 @@ function HowItWorks() {
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
                   Step {step.n}
                 </p>
-                <p className="font-syne font-bold text-white mb-2">
+                <p className="font-syne font-bold text-white mb-3">
                   {step.title}
                 </p>
-                <p className="text-sm text-zinc-400 leading-relaxed">
-                  {step.desc}
-                </p>
+                <ul className="flex flex-col gap-1.5">
+                  {step.bullets.map((b) => (
+                    <li key={b} className="flex items-start gap-2 text-sm text-zinc-400">
+                      <span className="mt-1.5 w-1 h-1 rounded-full bg-[#6C47FF] shrink-0" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           ))}
@@ -210,19 +228,31 @@ function HowItWorksCreators() {
       n: "01",
       icon: <Search size={18} />,
       title: "Browse Live Campaigns",
-      desc: "See what brands are paying right now. Filter by platform and payout rate.",
+      bullets: [
+        "See what brands are paying right now",
+        "Filter by platform and payout rate",
+        "No pitch emails or negotiations",
+      ],
     },
     {
       n: "02",
       icon: <Video size={18} />,
       title: "Post Your Content",
-      desc: "Follow the brief, post on your own account. Your style, your voice — that's the point.",
+      bullets: [
+        "Follow the campaign brief",
+        "Post on your own account",
+        "Your style, your voice",
+      ],
     },
     {
       n: "03",
       icon: <Wallet size={18} />,
       title: "Watch Your Wallet Fill Up",
-      desc: "Submit your post URL. We track views every 6 hours and your wallet updates in real time.",
+      bullets: [
+        "Submit your post URL",
+        "Views tracked every 6 hours",
+        "Wallet updates in real time",
+      ],
     },
   ];
 
@@ -257,12 +287,17 @@ function HowItWorksCreators() {
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3">
                   Step {step.n}
                 </p>
-                <p className="font-syne font-bold text-white mb-2">
+                <p className="font-syne font-bold text-white mb-3">
                   {step.title}
                 </p>
-                <p className="text-sm text-zinc-400 leading-relaxed">
-                  {step.desc}
-                </p>
+                <ul className="flex flex-col gap-1.5">
+                  {step.bullets.map((b) => (
+                    <li key={b} className="flex items-start gap-2 text-sm text-zinc-400">
+                      <span className="mt-1.5 w-1 h-1 rounded-full bg-[#00E5A0] shrink-0" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
           ))}
@@ -323,7 +358,7 @@ function FeatureGrid() {
     {
       icon: <Users size={22} />,
       title: "Zero Follower Minimum",
-      body: "We removed the gate. 200 followers or 200,000 — the rate per view is identical. Quality content wins.",
+      body: "We removed the gate. 200 followers or 200,000. The rate per view is identical. Quality content wins.",
     },
     {
       icon: <Zap size={22} />,
@@ -333,7 +368,7 @@ function FeatureGrid() {
     {
       icon: <Globe size={22} />,
       title: "All Major Platforms",
-      body: "TikTok, Instagram Reels, YouTube Shorts, Facebook — one platform, all your channels.",
+      body: "TikTok, Instagram Reels, YouTube Shorts, Facebook. One platform, all your channels.",
     },
     {
       icon: <ShieldCheck size={22} />,
