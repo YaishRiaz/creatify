@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useMemo, useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
@@ -230,7 +229,7 @@ export default function CreatorTasksPage() {
           isOpen={true}
           onClose={() => setSubmitTask(null)}
           task={submitTask}
-          campaign={submitTask.campaign as unknown as Campaign}
+          campaign={submitTask.campaign}
           onSuccess={(updated) => {
             setTasks((prev) => prev.map((t) => t.id === updated.id ? { ...t, ...updated } : t))
             setSubmitTask(null)

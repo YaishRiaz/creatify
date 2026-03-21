@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,14 +19,12 @@ import {
 } from 'recharts'
 import { useUser } from '@/hooks/useUser'
 import { createSupabaseClient } from '@/lib/supabase'
+import { formatLKR } from '@/lib/utils'
 import StatCard from '@/components/admin/StatCard'
 import AdminBadge from '@/components/admin/AdminBadge'
 import type { AuditLog } from '@/types'
 
 
-function formatLKR(n: number) {
-  return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
 function formatNum(n: number) {
   return n.toLocaleString('en-LK')
 }
@@ -41,6 +38,14 @@ interface SignupDataPoint {
 interface ViewDataPoint {
   date: string
   views: number
+}
+
+const tooltipStyle = {
+  contentStyle: {
+    backgroundColor: '#111111',
+    border: '1px solid #3f3f46',
+    borderRadius: 0,
+  },
 }
 
 export default function AdminOverviewPage() {
@@ -83,12 +88,12 @@ export default function AdminOverviewPage() {
         { data: users30 },
         { data: snapshots30 },
       ] = await Promise.all([
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('creator_profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('brand_profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'flagged'),
-        supabase.from('payouts').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('creator_profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('brand_profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'flagged'),
+        supabase.from('payouts').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('tasks').select('total_views'),
         supabase.from('campaigns').select('budget_total, budget_remaining'),
         supabase
@@ -164,14 +169,6 @@ export default function AdminOverviewPage() {
     )
   }
   if (!user || user.role !== 'admin') return null
-
-  const tooltipStyle = {
-    contentStyle: {
-      backgroundColor: '#111111',
-      border: '1px solid #3f3f46',
-      borderRadius: 0,
-    },
-  }
 
   return (
     <div>

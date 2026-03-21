@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -90,14 +89,35 @@ export default function CreatorDashboard() {
       if (profErr || !prof) { setError('Failed to load profile.'); setLoading(false); return }
       setProfile({ ...prof, wallet_balance: prof.wallet_balance ?? 0, total_earned: prof.total_earned ?? 0 })
 
-      const { data: taskData, error: taskErr } = await supabase
-        .from('tasks')
-        .select('*, campaign:campaigns(id, title, payout_rate, status, brief, hashtags, brand:brand_profiles(company_name))')
-        .eq('creator_id', prof.id)
-        .order('created_at', { ascending: false })
+      // Fetch tasks, active campaign count, and onboarding task in parallel
+      const [
+        { data: taskData, error: taskErr },
+        { count },
+        { data: obTask },
+      ] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select('*, campaign:campaigns(id, title, payout_rate, status, brief, hashtags, brand:brand_profiles(company_name))')
+          .eq('creator_id', prof.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('campaigns')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'active')
+          .eq('is_onboarding', false),
+        supabase
+          .from('tasks')
+          .select('id, status, campaign_id, creator_id, platform, post_url, accepted_at, created_at, total_views, total_earned, fraud_score')
+          .eq('campaign_id', ONBOARDING_CAMPAIGN_ID)
+          .eq('creator_id', prof.id)
+          .maybeSingle(),
+      ])
+
       if (taskErr) { setError('Failed to load tasks.'); setLoading(false); return }
       const typedTasks = (taskData ?? []) as TaskWithCampaign[]
       setTasks(typedTasks)
+      setActiveCampaignCount(count ?? 0)
+      setOnboardingTask(obTask as Task | null)
 
       const taskIds = typedTasks.map((t) => t.id)
       if (taskIds.length > 0) {
@@ -109,14 +129,6 @@ export default function CreatorDashboard() {
           .limit(10)
         setSnapshots((snapData ?? []) as Snapshot[])
       }
-
-      const { count } = await supabase
-        .from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active').eq('is_onboarding', false)
-      setActiveCampaignCount(count ?? 0)
-
-      const { data: obTask } = await supabase
-        .from('tasks').select('*').eq('campaign_id', ONBOARDING_CAMPAIGN_ID).eq('creator_id', prof.id).maybeSingle()
-      setOnboardingTask(obTask as Task | null)
 
       setLoading(false)
     }
@@ -336,7 +348,7 @@ export default function CreatorDashboard() {
           isOpen={true}
           onClose={() => setSubmitTask(null)}
           task={submitTask}
-          campaign={submitTask.campaign as unknown as Campaign}
+          campaign={submitTask.campaign}
           onSuccess={(updated) => {
             setTasks((prev) => prev.map((t) => t.id === updated.id ? { ...t, ...updated } : t))
             setSubmitTask(null)
