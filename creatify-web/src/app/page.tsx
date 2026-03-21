@@ -31,7 +31,7 @@ function Hero() {
         }}
       />
 
-      <div className="relative z-10 max-w-4xl mx-auto w-full flex flex-col items-start gap-8 pt-24 pb-20 px-6">
+      <div className="relative z-10 max-w-4xl mx-auto w-full flex flex-col items-start gap-8 pt-24 pb-20 px-5 sm:px-6">
         {/* Badge */}
         <div className="flex items-center gap-2 border border-[#6C47FF]/50 text-[#6C47FF] text-sm px-4 py-2 rounded-full">
           <span className="animate-pulse-dot">🇱🇰</span>
@@ -40,7 +40,7 @@ function Hero() {
 
         {/* Headline */}
         <div
-          className="font-syne font-extrabold text-5xl md:text-7xl leading-none tracking-tight text-white"
+          className="font-syne font-extrabold text-4xl md:text-7xl leading-none tracking-tight text-white"
         >
           <div>Post Content.</div>
           <div className="pl-4 md:pl-8 mt-1">Get Paid Per View.</div>
@@ -56,13 +56,13 @@ function Hero() {
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <Link
             href="/auth/signup?role=brand"
-            className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[52px] w-full sm:w-auto flex items-center justify-center"
+            className="bg-[#6C47FF] text-white px-8 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 uppercase tracking-wide min-h-[52px] w-full sm:w-auto flex items-center justify-center"
           >
             Launch a Campaign
           </Link>
           <Link
             href="/auth/signup?role=creator"
-            className="border border-zinc-600 text-white bg-transparent px-8 py-4 text-base font-semibold rounded-none hover:border-white transition-colors duration-200 min-h-[52px] w-full sm:w-auto flex items-center justify-center"
+            className="border border-zinc-600 text-white bg-transparent px-8 py-4 text-sm font-semibold rounded-none hover:border-white hover:bg-white/5 transition-colors duration-200 uppercase tracking-wide min-h-[52px] w-full sm:w-auto flex items-center justify-center"
           >
             Start Earning
           </Link>
@@ -109,12 +109,12 @@ function NumbersBar() {
           {stats.map(({ value, label }) => (
             <div
               key={label}
-              className="flex flex-col items-center gap-1 sm:px-8"
+              className="flex flex-col items-center gap-1 sm:px-8 pb-6 sm:pb-0 border-b border-zinc-800 sm:border-b-0 last:border-b-0"
             >
-              <span className="font-mono text-4xl font-bold text-[#00E5A0] tabular-nums">
+              <span className="font-syne text-5xl font-black text-[#00E5A0] tabular-nums">
                 {value}
               </span>
-              <span className="text-sm text-zinc-500 uppercase tracking-widest">
+              <span className="text-xs text-zinc-500 uppercase tracking-widest mt-1">
                 {label}
               </span>
             </div>
@@ -151,7 +151,8 @@ function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 md:py-32 px-4">
+    <section id="how-it-works" className="py-20 px-5">
+      <div id="for-brands" className="-mt-16 pt-16 pointer-events-none" />
       <div className="max-w-6xl mx-auto">
         <div className="mb-12">
           <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
@@ -226,7 +227,7 @@ function HowItWorksCreators() {
   ];
 
   return (
-    <section id="for-creators" className="py-24 md:py-32 px-4 bg-[#0D0D0D]">
+    <section id="for-creators" className="py-20 px-5 bg-[#0D0D0D]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-12">
           <p className="text-xs text-[#00E5A0] uppercase tracking-widest font-semibold mb-3">
@@ -284,7 +285,7 @@ function HowItWorksCreators() {
 ───────────────────────────────────────────── */
 function TheDifference() {
   return (
-    <section className="relative py-28 md:py-40 px-4 overflow-hidden">
+    <section className="relative py-20 px-5 overflow-hidden">
       {/* Radial glow — exception: complex gradient */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -293,7 +294,7 @@ function TheDifference() {
             "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(108,71,255,0.11) 0%, transparent 70%)",
         }}
       />
-      <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-8 text-center">
+      <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-8 text-center px-5">
         <p
           className="font-syne font-extrabold text-3xl md:text-5xl text-white leading-tight"
         >
@@ -305,7 +306,7 @@ function TheDifference() {
         </p>
         <Link
           href="/auth/signup"
-          className="bg-[#6C47FF] text-white px-8 py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[44px] flex items-center"
+          className="bg-[#6C47FF] text-white px-8 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 uppercase tracking-wide min-h-[44px] flex items-center"
         >
           Create Free Account
         </Link>
@@ -342,7 +343,7 @@ function FeatureGrid() {
   ];
 
   return (
-    <section className="py-24 md:py-32 px-4 bg-[#0A0A0A]">
+    <section className="py-20 px-5 bg-[#0A0A0A]">
       <div className="max-w-6xl mx-auto">
         <div className="mb-14">
           <p className="text-xs text-[#6C47FF] uppercase tracking-widest font-semibold mb-3">
@@ -404,7 +405,7 @@ function DualCTAStrip() {
           <div>
             <Link
               href="/auth/signup?role=brand"
-              className="inline-flex items-center bg-[#6C47FF] text-white px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 min-h-[44px]"
+              className="inline-flex items-center bg-[#6C47FF] text-white px-8 py-4 text-sm font-semibold rounded-none hover:bg-[#5538ee] transition-colors duration-200 uppercase tracking-wide min-h-[44px]"
             >
               Launch a Campaign
             </Link>
@@ -428,7 +429,7 @@ function DualCTAStrip() {
           <div>
             <Link
               href="/auth/signup?role=creator"
-              className="inline-flex items-center border border-[#00E5A0] text-[#00E5A0] px-7 py-3.5 text-sm font-semibold rounded-none hover:bg-[#00E5A0] hover:text-black transition-all duration-200 min-h-[44px]"
+              className="inline-flex items-center border border-[#00E5A0] text-[#00E5A0] px-8 py-4 text-sm font-semibold rounded-none hover:bg-[#00E5A0] hover:text-black transition-all duration-200 uppercase tracking-wide min-h-[44px]"
             >
               Start Earning Free
             </Link>
