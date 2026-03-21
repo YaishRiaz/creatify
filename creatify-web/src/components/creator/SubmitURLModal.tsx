@@ -10,7 +10,7 @@ interface SubmitURLModalProps {
   isOpen: boolean
   onClose: () => void
   task: Task
-  campaign: Campaign
+  campaign: Pick<Campaign, 'brief' | 'hashtags'>
   onSuccess: (updatedTask: Task) => void
 }
 

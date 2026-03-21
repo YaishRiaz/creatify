@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2 } from 'lucide-react'
@@ -80,7 +79,12 @@ export default function CreatorWalletPage() {
           .eq('creator_id', prof.id)
           .gt('total_earned', 0)
           .order('total_earned', { ascending: false })
-        setEarningTasks((taskData ?? []) as unknown as EarningTask[])
+        setEarningTasks(
+          (taskData ?? []).map((t) => ({
+            ...t,
+            campaign: Array.isArray(t.campaign) ? (t.campaign[0] ?? null) : t.campaign,
+          })) as EarningTask[]
+        )
       }
       setLoading(false)
     }

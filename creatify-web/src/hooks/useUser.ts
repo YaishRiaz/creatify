@@ -28,7 +28,7 @@ export function useUser() {
         if (session?.user && isMounted) {
           const { data } = await supabase
             .from('users')
-            .select('*')
+            .select('id, email, full_name, role, phone, is_verified, created_at')
             .eq('id', session.user.id)
             .single()
           if (isMounted) setUser(data)
@@ -48,7 +48,7 @@ export function useUser() {
         if (session?.user) {
           const { data } = await supabase
             .from('users')
-            .select('*')
+            .select('id, email, full_name, role, phone, is_verified, created_at')
             .eq('id', session.user.id)
             .single()
           if (isMounted) setUser(data)

@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -36,6 +35,7 @@ export default function AuditLogPage() {
   useEffect(() => {
     if (!user || user.role !== 'admin') return
     fetchLogs()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, page])
 
   async function fetchLogs() {

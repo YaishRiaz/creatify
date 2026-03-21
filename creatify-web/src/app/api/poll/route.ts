@@ -1,4 +1,3 @@
-export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -88,25 +87,62 @@ export async function POST(req: NextRequest) {
 
     results.details.push(`Found ${tasks.length} tasks to poll`)
 
-    // 3. Process each task
-    for (const task of tasks) {
-      const campaign = Array.isArray(task.campaign)
-        ? task.campaign[0]
-        : task.campaign
-      const creator = Array.isArray(task.creator)
-        ? task.creator[0]
-        : task.creator
+    // 3. Filter to only actionable tasks
+    const activeTasks = tasks.filter((t) => {
+      const campaign = Array.isArray(t.campaign) ? t.campaign[0] : t.campaign
+      const creator = Array.isArray(t.creator) ? t.creator[0] : t.creator
+      return campaign && campaign.status === 'active' && campaign.budget_remaining > 0 && creator
+    })
 
-      if (!campaign || campaign.status !== 'active') continue
-      if (campaign.budget_remaining <= 0) continue
+    // 4. Batch all external view fetches + previous-snapshot fetches in parallel
+    const [viewResults, prevSnapshotResults] = await Promise.all([
+      Promise.allSettled(
+        activeTasks.map((t) => getViewCount(t.platform, t.post_url, t.post_id ?? undefined))
+      ),
+      Promise.all(
+        activeTasks.map((t) =>
+          supabase
+            .from('view_snapshots')
+            .select('delta_views')
+            .eq('task_id', t.id)
+            .order('snapshotted_at', { ascending: false })
+            .limit(5)
+        )
+      ),
+    ])
+
+    // Accumulators — collect all changes before writing
+    const snapshotsToInsert: object[] = []
+    const taskUpdates: Array<{ id: string; data: object }> = []
+    const creatorEarningsAccum = new Map<string, number>()   // user_id → total earned this cycle
+    const campaignSpendAccum = new Map<string, number>()     // campaign_id → total spent this cycle
+    const exhaustedCampaigns = new Set<string>()
+
+    // Snapshot initial budget per campaign so we can accumulate deductions accurately
+    const campaignBudgetSnapshot = new Map<string, number>()
+    for (const t of activeTasks) {
+      const campaign = Array.isArray(t.campaign) ? t.campaign[0] : t.campaign
+      if (campaign && !campaignBudgetSnapshot.has(t.campaign_id)) {
+        campaignBudgetSnapshot.set(t.campaign_id, campaign.budget_remaining)
+      }
+    }
+
+    // 5. Process each task result
+    for (let i = 0; i < activeTasks.length; i++) {
+      const task = activeTasks[i]
+      const campaign = Array.isArray(task.campaign) ? task.campaign[0] : task.campaign
+      const creator = Array.isArray(task.creator) ? task.creator[0] : task.creator
+      const viewResult = viewResults[i]
+      const prevSnapshots = prevSnapshotResults[i]?.data ?? []
 
       try {
-        const viewData = await getViewCount(
-          task.platform,
-          task.post_url,
-          task.post_id ?? undefined
-        )
+        if (viewResult.status === 'rejected') {
+          results.errors++
+          results.details.push(`Task ${task.id}: view fetch error - ${String(viewResult.reason)}`)
+          continue
+        }
 
+        const viewData = viewResult.value
         if (viewData.error) {
           results.errors++
           results.details.push(`Task ${task.id}: view fetch error - ${viewData.error}`)
@@ -116,28 +152,13 @@ export async function POST(req: NextRequest) {
         const currentViews = viewData.views
         const deltaViews = Math.max(0, currentViews - task.total_views)
 
-        // Always save a snapshot even if no new views
         if (deltaViews === 0) {
-          await supabase.from('view_snapshots').insert({
-            task_id: task.id,
-            views_at_snapshot: currentViews,
-            delta_views: 0,
-            earnings_added: 0,
-          })
+          snapshotsToInsert.push({ task_id: task.id, views_at_snapshot: currentViews, delta_views: 0, earnings_added: 0 })
           continue
         }
 
-        // Fetch previous deltas for fraud scoring
-        const { data: prevSnapshots } = await supabase
-          .from('view_snapshots')
-          .select('delta_views')
-          .eq('task_id', task.id)
-          .order('snapshotted_at', { ascending: false })
-          .limit(5)
+        const previousDeltas = prevSnapshots.map((s: { delta_views: number }) => s.delta_views)
 
-        const previousDeltas = prevSnapshots?.map((s) => s.delta_views) ?? []
-
-        // Run fraud check
         const fraud = calculateFraudScore({
           deltaViews,
           deltaLikes: viewData.likes,
@@ -147,113 +168,95 @@ export async function POST(req: NextRequest) {
         })
 
         if (fraud.flagged) {
-          await supabase
-            .from('tasks')
-            .update({
-              status: 'flagged',
-              fraud_score: fraud.score,
-              total_views: currentViews,
-            })
-            .eq('id', task.id)
-
+          taskUpdates.push({ id: task.id, data: { status: 'flagged', fraud_score: fraud.score, total_views: currentViews } })
           results.flagged++
           results.details.push(`Task ${task.id}: FLAGGED (score: ${fraud.score})`)
           continue
         }
 
-        // Calculate earnings in LKR (2 decimal places)
-        let earnings =
-          Math.round((deltaViews / 1000) * campaign.payout_rate * 100) / 100
+        // Use accumulated spend to track effective remaining budget this cycle
+        const alreadySpent = campaignSpendAccum.get(task.campaign_id) ?? 0
+        const effectiveBudgetRemaining = (campaignBudgetSnapshot.get(task.campaign_id) ?? 0) - alreadySpent
+        if (effectiveBudgetRemaining <= 0) continue
 
-        // Apply per-creator cap
-        if (campaign.per_creator_cap) {
-          const remainingCap = campaign.per_creator_cap - task.total_earned
+        let earnings = Math.round((deltaViews / 1000) * campaign!.payout_rate * 100) / 100
+
+        if (campaign!.per_creator_cap) {
+          const remainingCap = campaign!.per_creator_cap - task.total_earned
           if (earnings > remainingCap) earnings = remainingCap
         }
-
-        // Cap at remaining budget
-        if (earnings > campaign.budget_remaining) {
-          earnings = campaign.budget_remaining
-        }
-
+        if (earnings > effectiveBudgetRemaining) earnings = effectiveBudgetRemaining
         if (earnings <= 0) continue
 
-        // A: Update task
-        const { error: taskError } = await supabase
-          .from('tasks')
-          .update({
+        taskUpdates.push({
+          id: task.id,
+          data: {
             total_views: currentViews,
             total_earned: Math.round((task.total_earned + earnings) * 100) / 100,
             status: 'tracking',
             fraud_score: fraud.score,
-          })
-          .eq('id', task.id)
-
-        if (taskError) {
-          results.errors++
-          continue
-        }
-
-        // B: Update creator wallet
-        const { data: currentProfile } = await supabase
-          .from('creator_profiles')
-          .select('wallet_balance, total_earned')
-          .eq('user_id', creator.user_id)
-          .single()
-
-        if (currentProfile) {
-          await supabase
-            .from('creator_profiles')
-            .update({
-              wallet_balance:
-                Math.round((currentProfile.wallet_balance + earnings) * 100) / 100,
-              total_earned:
-                Math.round((currentProfile.total_earned + earnings) * 100) / 100,
-            })
-            .eq('user_id', creator.user_id)
-        }
-
-        // C: Update campaign budget
-        await supabase
-          .from('campaigns')
-          .update({
-            budget_remaining:
-              Math.round((campaign.budget_remaining - earnings) * 100) / 100,
-          })
-          .eq('id', task.campaign_id)
-
-        // D: Save snapshot
-        await supabase.from('view_snapshots').insert({
-          task_id: task.id,
-          views_at_snapshot: currentViews,
-          delta_views: deltaViews,
-          earnings_added: earnings,
+          },
         })
+        creatorEarningsAccum.set(creator!.user_id, (creatorEarningsAccum.get(creator!.user_id) ?? 0) + earnings)
+        campaignSpendAccum.set(task.campaign_id, alreadySpent + earnings)
+        snapshotsToInsert.push({ task_id: task.id, views_at_snapshot: currentViews, delta_views: deltaViews, earnings_added: earnings })
 
-        // E: Complete campaign + tasks if budget exhausted
-        const newBudgetRemaining = campaign.budget_remaining - earnings
-        if (newBudgetRemaining <= 0) {
-          await supabase
-            .from('campaigns')
-            .update({ status: 'completed' })
-            .eq('id', task.campaign_id)
-
-          await supabase
-            .from('tasks')
-            .update({ status: 'completed' })
-            .in('status', ['submitted', 'tracking', 'accepted'])
-            .eq('campaign_id', task.campaign_id)
-        }
+        if (effectiveBudgetRemaining - earnings <= 0) exhaustedCampaigns.add(task.campaign_id)
 
         results.processed++
         results.earned += earnings
-        results.details.push(
-          `Task ${task.id}: +${deltaViews} views, +LKR ${earnings}`
-        )
+        results.details.push(`Task ${task.id}: +${deltaViews} views, +LKR ${earnings}`)
       } catch (taskError) {
         results.errors++
         results.details.push(`Task ${task.id}: unexpected error - ${String(taskError)}`)
       }
+    }
+
+    // 6. Apply all DB writes in batches
+    // Task updates + snapshot inserts fire in parallel
+    await Promise.all([
+      ...taskUpdates.map(({ id, data }) => supabase.from('tasks').update(data).eq('id', id)),
+      snapshotsToInsert.length > 0 ? supabase.from('view_snapshots').insert(snapshotsToInsert) : Promise.resolve(),
+    ])
+
+    // Creator wallet updates — one read+write per unique creator (was N reads + N writes)
+    await Promise.all(
+      [...creatorEarningsAccum.entries()].map(async ([userId, earned]) => {
+        const { data: profile } = await supabase
+          .from('creator_profiles')
+          .select('wallet_balance, total_earned')
+          .eq('user_id', userId)
+          .single()
+        if (profile) {
+          await supabase
+            .from('creator_profiles')
+            .update({
+              wallet_balance: Math.round((profile.wallet_balance + earned) * 100) / 100,
+              total_earned: Math.round((profile.total_earned + earned) * 100) / 100,
+            })
+            .eq('user_id', userId)
+        }
+      })
+    )
+
+    // Campaign budget updates — one write per unique campaign
+    await Promise.all(
+      [...campaignSpendAccum.entries()].map(([campaignId, spent]) => {
+        const newRemaining = Math.round(((campaignBudgetSnapshot.get(campaignId) ?? 0) - spent) * 100) / 100
+        return supabase.from('campaigns').update({ budget_remaining: newRemaining }).eq('id', campaignId)
+      })
+    )
+
+    // Mark exhausted campaigns and their tasks as completed
+    if (exhaustedCampaigns.size > 0) {
+      await Promise.all(
+        [...exhaustedCampaigns].flatMap((campaignId) => [
+          supabase.from('campaigns').update({ status: 'completed' }).eq('id', campaignId),
+          supabase.from('tasks').update({ status: 'completed' })
+            .in('status', ['submitted', 'tracking', 'accepted'])
+            .eq('campaign_id', campaignId),
+        ])
+      )
     }
 
     return NextResponse.json({

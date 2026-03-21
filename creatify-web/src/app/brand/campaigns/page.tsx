@@ -1,18 +1,15 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { PlusCircle, Megaphone } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, Eye, Users, Wallet } from 'lucide-react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useUser } from '@/hooks/useUser'
-import { formatNumber, formatLKR, formatDate } from '@/lib/utils'
+import { formatLKR, formatDate } from '@/lib/utils'
 import type { Campaign } from '@/types'
-
-
-type StatusFilter = 'all' | 'active' | 'paused' | 'completed' | 'draft' | 'pending_payment'
 
 const STATUS_BADGE: Record<string, string> = {
   draft: 'bg-zinc-800 text-zinc-400',
@@ -22,206 +19,176 @@ const STATUS_BADGE: Record<string, string> = {
   completed: 'bg-blue-500/10 text-blue-400',
 }
 
-interface CampaignWithMeta extends Campaign {
-  total_views: number
-  creator_count: number
+type CampaignTab = 'all' | 'active' | 'paused' | 'completed' | 'draft'
+
+interface CampaignWithStats extends Campaign {
+  tasks?: { total_views: number; total_earned: number }[]
 }
 
-export default function CampaignsPage() {
+export default function BrandCampaignsPage() {
   const { user, loading: userLoading } = useUser()
+  const router = useRouter()
   const supabase = useMemo(() => createSupabaseClient(), [])
 
-  const [campaigns, setCampaigns] = useState<CampaignWithMeta[]>([])
+  const [campaigns, setCampaigns] = useState<CampaignWithStats[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<StatusFilter>('all')
+  const [tab, setTab] = useState<CampaignTab>('all')
 
   useEffect(() => {
     if (userLoading || !user) return
-
     const fetchData = async () => {
       setLoading(true)
-      setError(null)
-
-      const { data: profile, error: profileErr } = await supabase
+      const { data: profile } = await supabase
         .from('brand_profiles')
         .select('id')
         .eq('user_id', user.id)
         .single()
+      if (!profile) { setLoading(false); return }
 
-      if (profileErr || !profile) {
-        setError('Failed to load profile.')
-        setLoading(false)
-        return
-      }
-
-      const { data: campaignData, error: campaignErr } = await supabase
+      const { data } = await supabase
         .from('campaigns')
-        .select('*')
+        .select('*, tasks:tasks(total_views, total_earned)')
         .eq('brand_id', profile.id)
         .order('created_at', { ascending: false })
-
-      if (campaignErr) {
-        setError('Failed to load campaigns.')
-        setLoading(false)
-        return
-      }
-
-      const ids = (campaignData ?? []).map((c) => c.id)
-      let viewsMap: Record<string, number> = {}
-      let creatorMap: Record<string, number> = {}
-
-      if (ids.length > 0) {
-        const { data: taskData } = await supabase
-          .from('tasks')
-          .select('campaign_id, total_views, creator_id')
-          .in('campaign_id', ids)
-
-        for (const t of taskData ?? []) {
-          viewsMap[t.campaign_id] = (viewsMap[t.campaign_id] ?? 0) + (t.total_views ?? 0)
-          creatorMap[t.campaign_id] = (creatorMap[t.campaign_id] ?? 0) + 1
-        }
-      }
-
-      setCampaigns(
-        (campaignData ?? []).map((c) => ({
-          ...c,
-          total_views: viewsMap[c.id] ?? 0,
-          creator_count: creatorMap[c.id] ?? 0,
-        }))
-      )
+        .limit(200)
+      setCampaigns((data as CampaignWithStats[]) ?? [])
       setLoading(false)
     }
-
     fetchData()
   }, [user, userLoading, supabase])
 
-  const filters: { label: string; value: StatusFilter }[] = [
-    { label: 'All', value: 'all' },
-    { label: 'Active', value: 'active' },
-    { label: 'Paused', value: 'paused' },
-    { label: 'Completed', value: 'completed' },
+  const filtered = campaigns.filter((c) => tab === 'all' || c.status === tab)
+
+  const tabs: { key: CampaignTab; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'paused', label: 'Paused' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'draft', label: 'Draft' },
   ]
 
-  const filtered = filter === 'all' ? campaigns : campaigns.filter((c) => c.status === filter)
+  if (userLoading || loading) {
+    return (
+      <div className="font-sans animate-pulse flex flex-col gap-4">
+        <div className="h-10 w-48 bg-zinc-800/50 rounded" />
+        {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-zinc-800/50 rounded" />)}
+      </div>
+    )
+  }
 
   return (
     <div className="font-sans">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="font-syne text-3xl font-extrabold text-white">Campaigns</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-syne text-3xl font-extrabold text-white">Campaigns</h1>
+          <p className="text-zinc-500 text-sm mt-1">{campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''} total</p>
+        </div>
         <Link
           href="/brand/campaigns/create"
-          className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-6 py-3 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
+          className="flex items-center gap-2 bg-[#6C47FF] text-white px-4 py-2.5 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
         >
-          <PlusCircle size={16} />
+          <Plus size={16} />
           New Campaign
         </Link>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-2 mb-6">
-        {filters.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`px-4 py-1.5 text-sm transition-colors ${
-              filter === f.value
-                ? 'bg-[#6C47FF]/10 text-white border border-[#6C47FF]/30'
-                : 'text-zinc-400 border border-zinc-800 hover:text-white hover:border-zinc-600'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-zinc-800 mb-6">
+        {tabs.map(({ key, label }) => {
+          const count = key === 'all' ? campaigns.length : campaigns.filter((c) => c.status === key).length
+          return (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
+                tab === key ? 'text-white border-b-2 border-[#6C47FF] -mb-px' : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              {label}
+              {count > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-[#6C47FF] text-white' : 'bg-zinc-800 text-zinc-400'}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-6">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-[#111111] border border-zinc-800 p-6 h-48 animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Megaphone size={64} className="text-zinc-700 mb-4" />
-          <p className="font-syne text-xl font-bold text-white mb-2">
-            {filter === 'all' ? 'No campaigns yet' : `No ${filter} campaigns`}
+      {filtered.length === 0 ? (
+        <div className="bg-[#111111] border border-zinc-800 p-16 text-center">
+          <p className="text-zinc-500 text-sm mb-4">
+            {tab === 'all' ? "You haven't created any campaigns yet." : `No ${tab} campaigns.`}
           </p>
-          <p className="text-zinc-500 text-sm mb-6">
-            {filter === 'all'
-              ? 'Create your first campaign to start getting real content.'
-              : 'Try changing the filter above.'}
-          </p>
-          {filter === 'all' && (
+          {tab === 'all' && (
             <Link
               href="/brand/campaigns/create"
-              className="bg-[#6C47FF] text-white px-6 py-3 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
+              className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-5 py-2.5 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
             >
-              Create Campaign
+              <Plus size={16} />
+              Create Your First Campaign
             </Link>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map((c) => {
-            const spent = c.budget_total - c.budget_remaining
-            const pct = c.budget_total > 0 ? (spent / c.budget_total) * 100 : 0
+        <div className="flex flex-col gap-4">
+          {filtered.map((campaign) => {
+            const totalViews = (campaign.tasks ?? []).reduce((s, t) => s + (t.total_views ?? 0), 0)
+            const spent = campaign.budget_total - campaign.budget_remaining
+            const pct = campaign.budget_total > 0 ? (spent / campaign.budget_total) * 100 : 0
             const barColor = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-[#00E5A0]'
-            const isEnded = c.end_date && new Date(c.end_date) < new Date()
+
             return (
-              <div key={c.id} className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-syne text-lg font-bold text-white leading-tight">{c.title}</h3>
-                  <span className={`text-xs px-2.5 py-1 shrink-0 capitalize ${STATUS_BADGE[c.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
-                    {c.status.replace('_', ' ')}
-                  </span>
-                </div>
+              <div
+                key={campaign.id}
+                onClick={() => router.push(`/brand/campaigns/${campaign.id}`)}
+                className="bg-[#111111] border border-zinc-800 p-5 cursor-pointer hover:border-zinc-700 transition-colors"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-xs px-2 py-0.5 capitalize ${STATUS_BADGE[campaign.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
+                        {campaign.status.replace('_', ' ')}
+                      </span>
+                      {campaign.target_platforms?.map((p) => (
+                        <span key={p} className="text-xs bg-zinc-800 text-zinc-500 px-2 py-0.5 capitalize">{p}</span>
+                      ))}
+                    </div>
+                    <h3 className="font-syne font-bold text-white text-lg truncate">{campaign.title}</h3>
+                    <p className="text-sm text-zinc-500 mt-0.5">
+                      {formatLKR(campaign.payout_rate)}/1K views · Created {formatDate(campaign.created_at)}
+                    </p>
 
-                {/* Platforms */}
-                <div className="flex flex-wrap gap-1.5">
-                  {c.target_platforms.map((p) => (
-                    <span key={p} className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 capitalize">{p}</span>
-                  ))}
-                </div>
-
-                {/* Progress bar */}
-                <div>
-                  <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                    <span>{formatLKR(spent)} spent</span>
-                    <span>{formatLKR(c.budget_total)} total</span>
+                    {/* Budget bar */}
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs text-zinc-500 mb-1">
+                        <span>{formatLKR(spent)} spent</span>
+                        <span>{formatLKR(campaign.budget_total)} budget</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                        <div className={`h-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+
+                  {/* Stats */}
+                  <div className="flex sm:flex-col gap-4 sm:gap-2 shrink-0 sm:items-end">
+                    <div className="flex items-center gap-1.5 text-zinc-400">
+                      <Eye size={13} />
+                      <span className="text-sm text-white font-medium">{totalViews.toLocaleString('en-LK')}</span>
+                      <span className="text-xs">views</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-zinc-400">
+                      <Users size={13} />
+                      <span className="text-sm text-white font-medium">{(campaign.tasks ?? []).length}</span>
+                      <span className="text-xs">creators</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-zinc-400">
+                      <Wallet size={13} />
+                      <span className="text-sm text-[#00E5A0] font-medium">{formatLKR(campaign.budget_remaining)}</span>
+                      <span className="text-xs">left</span>
+                    </div>
                   </div>
-                </div>
-
-                {/* Stats row */}
-                <div className="flex items-center gap-4 text-sm text-zinc-400">
-                  <span><span className="text-[#00E5A0] font-medium">{formatNumber(c.total_views)}</span> views</span>
-                  <span>·</span>
-                  <span>{c.creator_count} creators</span>
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between mt-auto pt-2 border-t border-zinc-800">
-                  <p className="text-xs text-zinc-500">
-                    {c.end_date
-                      ? `${isEnded ? 'Ended' : 'Ends'} ${formatDate(c.end_date)}`
-                      : 'No end date'}
-                  </p>
-                  <Link
-                    href={`/brand/campaigns/${c.id}`}
-                    className="text-xs text-zinc-300 border border-zinc-700 px-3 py-1.5 hover:border-zinc-400 hover:text-white transition-all"
-                  >
-                    View Details
-                  </Link>
                 </div>
               </div>
             )

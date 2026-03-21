@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -10,14 +9,10 @@ import { format } from 'date-fns'
 import { useUser } from '@/hooks/useUser'
 import { createSupabaseClient } from '@/lib/supabase'
 import { logAdminAction } from '@/lib/audit'
+import { formatLKR } from '@/lib/utils'
 import DataTable from '@/components/admin/DataTable'
 import AdminBadge from '@/components/admin/AdminBadge'
 import ConfirmModal from '@/components/admin/ConfirmModal'
-
-
-function formatLKR(n: number) {
-  return `LKR ${n.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
 
 interface TaskSummary {
   id: string
@@ -79,6 +74,7 @@ export default function CampaignsPage() {
       .from('campaigns')
       .select('*, brand:brand_profiles(company_name), tasks:tasks(id, status, total_views, total_earned)')
       .order('created_at', { ascending: false })
+      .limit(200)
     setCampaigns((data as CampaignRow[]) ?? [])
     setPageLoading(false)
   }
