@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard,
@@ -32,20 +32,75 @@ const navItems = [
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, signOut } = useUser()
-  const router = useRouter()
+  const { signOut } = useUser()
   const pathname = usePathname()
   const [fraudCount, setFraudCount] = useState(0)
   const [payoutCount, setPayoutCount] = useState(0)
+  const [checking, setChecking] = useState(true)
+  const [timedOut, setTimedOut] = useState(false)
+  const [authedUser, setAuthedUser] = useState<{ id: string; full_name?: string; email?: string; role?: string } | null>(null)
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== 'admin')) {
-      router.push('/')
+    const timer = setTimeout(() => {
+      setTimedOut(true)
+      setChecking(false)
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = getSupabaseClient()
+
+        const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
+        const sessionPromise = supabase.auth.getSession()
+
+        const result = await Promise.race([sessionPromise, timeoutPromise])
+
+        if (!result || !('data' in result) || !result.data.session) {
+          window.location.replace('/auth/login')
+          return
+        }
+
+        const session = result.data.session
+        const metaRole = session.user.user_metadata?.role
+
+        if (metaRole) {
+          if (metaRole !== 'admin') {
+            window.location.replace('/')
+            return
+          }
+          setAuthedUser({ id: session.user.id, email: session.user.email, role: metaRole, full_name: session.user.user_metadata?.full_name })
+          setChecking(false)
+          return
+        }
+
+        const { data: userData } = await Promise.race([
+          supabase.from('users').select('role, full_name, email').eq('id', session.user.id).single(),
+          new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 2000)),
+        ])
+
+        const role = userData?.role
+
+        if (role !== 'admin') {
+          window.location.replace('/')
+          return
+        }
+
+        setAuthedUser({ id: session.user.id, email: userData?.email || session.user.email, role, full_name: userData?.full_name })
+        setChecking(false)
+      } catch (err) {
+        console.error('Auth check error:', err)
+        window.location.replace('/auth/login')
+      }
     }
-  }, [user, loading, router])
+
+    checkAuth()
+  }, [])
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') return
+    if (!authedUser || authedUser.role !== 'admin') return
     const supabase = getSupabaseClient()
     async function fetchCounts() {
       const [{ count: fc }, { count: pc }] = await Promise.all([
@@ -56,17 +111,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setPayoutCount(pc ?? 0)
     }
     fetchCounts()
-  }, [user])
+  }, [authedUser])
 
-  if (loading) {
+  if (checking) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm">Loading your dashboard...</p>
+          <p className="text-zinc-700 text-xs mt-2">
+            Taking too long?{' '}
+            <a href="/auth/login" className="text-[#6C47FF] hover:underline">
+              Back to login
+            </a>
+          </p>
+        </div>
       </div>
     )
   }
 
-  if (!user || user.role !== 'admin') return null
+  if (!authedUser || authedUser.role !== 'admin') return null
+
+  const user = authedUser
 
   async function handleSignOut() {
     await signOut()
