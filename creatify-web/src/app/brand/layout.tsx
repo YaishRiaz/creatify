@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Megaphone,
@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 
 const navLinks = [
@@ -34,27 +35,92 @@ function getInitials(name: string): string {
 }
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, signOut } = useUser()
-  const router = useRouter()
+  const { signOut } = useUser()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [checking, setChecking] = useState(true)
+  const [timedOut, setTimedOut] = useState(false)
+  const [authedUser, setAuthedUser] = useState<{ id: string; full_name?: string; email?: string; role?: string } | null>(null)
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/login')
-    }
-  }, [loading, user, router])
+    const timer = setTimeout(() => {
+      setTimedOut(true)
+      setChecking(false)
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [])
 
-  if (loading) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = getSupabaseClient()
+
+        const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
+        const sessionPromise = supabase.auth.getSession()
+
+        const result = await Promise.race([sessionPromise, timeoutPromise])
+
+        if (!result || !('data' in result) || !result.data.session) {
+          window.location.replace('/auth/login')
+          return
+        }
+
+        const session = result.data.session
+        const metaRole = session.user.user_metadata?.role
+
+        if (metaRole) {
+          if (metaRole !== 'brand' && metaRole !== 'admin') {
+            window.location.replace('/creator/dashboard')
+            return
+          }
+          setAuthedUser({ id: session.user.id, email: session.user.email, role: metaRole, full_name: session.user.user_metadata?.full_name })
+          setChecking(false)
+          return
+        }
+
+        const { data: userData } = await Promise.race([
+          supabase.from('users').select('role, full_name, email').eq('id', session.user.id).single(),
+          new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 2000)),
+        ])
+
+        const role = userData?.role || 'brand'
+
+        if (role !== 'brand' && role !== 'admin') {
+          window.location.replace('/creator/dashboard')
+          return
+        }
+
+        setAuthedUser({ id: session.user.id, email: userData?.email || session.user.email, role, full_name: userData?.full_name })
+        setChecking(false)
+      } catch (err) {
+        console.error('Auth check error:', err)
+        window.location.replace('/auth/login')
+      }
+    }
+
+    checkAuth()
+  }, [])
+
+  if (checking) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm">Loading your dashboard...</p>
+          <p className="text-zinc-700 text-xs mt-2">
+            Taking too long?{' '}
+            <a href="/auth/login" className="text-[#6C47FF] hover:underline">
+              Back to login
+            </a>
+          </p>
+        </div>
       </div>
     )
   }
 
-  if (!user) return null
+  if (!authedUser) return null
 
+  const user = authedUser
   const initials = getInitials(user.full_name || user.email || 'B')
 
   const SidebarContent = () => (

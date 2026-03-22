@@ -53,7 +53,20 @@ export default function Navbar() {
       </Link>
     </div>
   ) : loading ? (
-    <div className="w-24 h-9 bg-zinc-800 animate-pulse rounded" />
+    <div className="flex items-center gap-3">
+      <Link
+        href="/auth/login"
+        className="text-sm text-zinc-300 border border-zinc-700 px-4 py-2 hover:border-zinc-400 hover:text-white transition-all duration-200"
+      >
+        Login
+      </Link>
+      <Link
+        href="/auth/signup"
+        className="text-sm bg-[#6C47FF] text-white px-4 py-2 hover:bg-[#5538ee] transition-colors duration-200"
+      >
+        Sign Up
+      </Link>
+    </div>
   ) : user ? (
     <div className="flex items-center gap-3">
       <span className="text-sm text-zinc-400 max-w-[160px] truncate">
@@ -106,7 +119,20 @@ export default function Navbar() {
       </Link>
     </>
   ) : loading ? (
-    <div className="w-full h-10 bg-zinc-800 animate-pulse rounded" />
+    <>
+      <Link
+        href="/auth/login"
+        className="text-sm text-center text-zinc-300 border border-zinc-700 px-4 py-3 hover:border-zinc-400 transition-all"
+      >
+        Login
+      </Link>
+      <Link
+        href="/auth/signup"
+        className="text-sm text-center bg-[#6C47FF] text-white px-4 py-3 hover:bg-[#5538ee] transition-colors"
+      >
+        Sign Up
+      </Link>
+    </>
   ) : user ? (
     <>
       <span className="text-sm text-zinc-400 truncate">{truncatedName}</span>
