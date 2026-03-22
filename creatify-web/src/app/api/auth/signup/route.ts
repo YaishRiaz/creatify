@@ -66,15 +66,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'NIC number is required for creator accounts' }, { status: 400 })
     }
 
-    // Create auth user with email pre-confirmed — no email sent
+    // Create auth user with metadata so the DB trigger can create the users row
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: email.toLowerCase().trim(),
       password,
-      email_confirm: true,
+      email_confirm: true, // pre-confirm so client can sign in immediately
+      user_metadata: {
+        full_name: String(full_name).trim(),
+        role: role as AllowedRole,
+        phone: phone?.trim() || '',
+      },
     })
 
     if (authError) {
-      // Don't leak internal Supabase error details
       const msg = authError.message.includes('already registered')
         ? 'An account with this email already exists'
         : 'Failed to create account'
@@ -83,18 +87,9 @@ export async function POST(req: NextRequest) {
 
     const uid = authData.user.id
 
-    // Insert into public.users
-    const { error: userError } = await adminClient.from('users').insert({
-      id: uid,
-      email: email.toLowerCase().trim(),
-      phone: phone?.trim() || null,
-      role: role as AllowedRole,
-      full_name: String(full_name).trim(),
-      is_verified: false,
-    })
-    if (userError) {
-      await adminClient.auth.admin.deleteUser(uid)
-      return NextResponse.json({ error: 'Failed to create user profile' }, { status: 400 })
+    // Update phone separately in case trigger doesn't pick it up
+    if (phone?.trim()) {
+      await adminClient.from('users').update({ phone: phone.trim() }).eq('id', uid)
     }
 
     // Insert role-specific profile
@@ -105,6 +100,7 @@ export async function POST(req: NextRequest) {
         industry: industry?.trim() || null,
       })
       if (error) {
+        console.error('Brand profile error:', error)
         await adminClient.auth.admin.deleteUser(uid)
         return NextResponse.json({ error: 'Failed to create brand profile' }, { status: 400 })
       }
@@ -117,12 +113,13 @@ export async function POST(req: NextRequest) {
         total_earned: 0,
       })
       if (error) {
+        console.error('Creator profile error:', error)
         await adminClient.auth.admin.deleteUser(uid)
         return NextResponse.json({ error: 'Failed to create creator profile' }, { status: 400 })
       }
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, userId: uid })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
