@@ -58,6 +58,7 @@ export default function LoginClient() {
       if (userError || !userData) {
         // Fallback: check user metadata
         const role = authData.user.user_metadata?.role
+        await new Promise(resolve => setTimeout(resolve, 500))
         if (role === 'brand') {
           window.location.href = '/brand/dashboard'
         } else if (role === 'admin') {
@@ -69,13 +70,15 @@ export default function LoginClient() {
       }
 
       // Step 3: Redirect based on role
-      // Use window.location.href for hard redirect
-      // This ensures the session cookie is set before navigating
+      // Small delay to ensure session cookie is written before navigating
       if (userData.role === 'brand') {
+        await new Promise(resolve => setTimeout(resolve, 500))
         window.location.href = '/brand/dashboard'
       } else if (userData.role === 'admin') {
+        await new Promise(resolve => setTimeout(resolve, 500))
         window.location.href = '/admin'
       } else {
+        await new Promise(resolve => setTimeout(resolve, 500))
         window.location.href = '/creator/dashboard'
       }
 
