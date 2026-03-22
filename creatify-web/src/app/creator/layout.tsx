@@ -2,14 +2,14 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Search, ListTodo, Wallet, User, LogOut, Menu, X,
 } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
-import { createSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 
 const navLinks = [
@@ -25,10 +25,9 @@ function getInitials(name: string): string {
 }
 
 export default function CreatorLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser()
+  const { user, loading, signOut } = useUser()
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = useMemo(() => createSupabaseClient(), [])
   const [mobileOpen, setMobileOpen] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
 
@@ -40,6 +39,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (!user) return
     const fetchBalance = async () => {
+      const supabase = getSupabaseClient()
       const { data } = await supabase
         .from('creator_profiles')
         .select('wallet_balance')
@@ -48,12 +48,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
       if (data) setWalletBalance(data.wallet_balance ?? 0)
     }
     fetchBalance()
-  }, [user, supabase])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-  }
+  }, [user])
 
   if (loading) {
     return (
@@ -122,7 +117,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
         <button
-          onClick={handleSignOut}
+          onClick={signOut}
           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors"
         >
           <LogOut size={16} />
