@@ -37,38 +37,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [fraudCount, setFraudCount] = useState(0)
   const [payoutCount, setPayoutCount] = useState(0)
   const [checking, setChecking] = useState(true)
-  const [timedOut, setTimedOut] = useState(false)
-  const [authedUser, setAuthedUser] = useState<{ id: string; full_name?: string; email?: string; role?: string } | null>(null)
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTimedOut(true)
-      setChecking(false)
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'INITIAL_SESSION') {
+          if (!session) {
+            window.location.href = '/auth/login'
+            return
+          }
+          const role = session.user.user_metadata?.role
+          if (role !== 'admin') {
+            window.location.href = '/'
+            return
+          }
+          setUserName(session.user.user_metadata?.full_name || session.user.email || '')
+          setChecking(false)
+        }
+        if (event === 'SIGNED_OUT') {
+          window.location.href = '/auth/login'
+        }
+      })
+
+    const timeout = setTimeout(() => {
+      window.location.href = '/auth/login'
     }, 5000)
-    return () => clearTimeout(timer)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        window.location.href = '/auth/login'
-        return
-      }
-
-      const role = session.user.user_metadata?.role
-
-      if (role !== 'admin') {
-        window.location.href = '/'
-        return
-      }
-
-      setAuthedUser({ id: session.user.id, email: session.user.email, role, full_name: session.user.user_metadata?.full_name })
-      setChecking(false)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!authedUser || authedUser.role !== 'admin') return
+    if (!userName) return
     async function fetchCounts() {
       const [{ count: fc }, { count: pc }] = await Promise.all([
         supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'flagged'),
@@ -78,7 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setPayoutCount(pc ?? 0)
     }
     fetchCounts()
-  }, [authedUser])
+  }, [userName])
 
   if (checking) {
     return (
@@ -96,10 +99,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     )
   }
-
-  if (!authedUser || authedUser.role !== 'admin') return null
-
-  const user = authedUser
 
   async function handleSignOut() {
     await signOut()
@@ -159,7 +158,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="p-4 border-t border-zinc-800">
           <div className="mb-3">
-            <p className="text-sm text-white truncate">{user.full_name}</p>
+            <p className="text-sm text-white truncate">{userName}</p>
             <p className="text-xs text-zinc-500">Administrator</p>
           </div>
           <button

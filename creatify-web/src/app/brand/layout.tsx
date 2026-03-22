@@ -39,34 +39,38 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [checking, setChecking] = useState(true)
-  const [timedOut, setTimedOut] = useState(false)
-  const [authedUser, setAuthedUser] = useState<{ id: string; full_name?: string; email?: string; role?: string } | null>(null)
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTimedOut(true)
-      setChecking(false)
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'INITIAL_SESSION') {
+          if (!session) {
+            window.location.href = '/auth/login'
+            return
+          }
+          const role = session.user.user_metadata?.role
+          if (role !== 'brand' && role !== 'admin') {
+            window.location.href = '/creator/dashboard'
+            return
+          }
+          const name = session.user.user_metadata?.full_name || session.user.email || ''
+          setUserName(name)
+          setChecking(false)
+        }
+        if (event === 'SIGNED_OUT') {
+          window.location.href = '/auth/login'
+        }
+      })
+
+    const timeout = setTimeout(() => {
+      window.location.href = '/auth/login'
     }, 5000)
-    return () => clearTimeout(timer)
-  }, [])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        window.location.href = '/auth/login'
-        return
-      }
-
-      const role = session.user.user_metadata?.role || 'creator'
-
-      if (role !== 'brand' && role !== 'admin') {
-        window.location.href = '/creator/dashboard'
-        return
-      }
-
-      setAuthedUser({ id: session.user.id, email: session.user.email, role, full_name: session.user.user_metadata?.full_name })
-      setChecking(false)
-    })
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [])
 
   if (checking) {
@@ -86,10 +90,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
     )
   }
 
-  if (!authedUser) return null
-
-  const user = authedUser
-  const initials = getInitials(user.full_name || user.email || 'B')
+  const initials = getInitials(userName || 'B')
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -129,7 +130,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
             {initials}
           </div>
           <div className="min-w-0">
-            <p className="text-sm text-white font-medium truncate">{user.full_name || user.email}</p>
+            <p className="text-sm text-white font-medium truncate">{userName}</p>
             <p className="text-xs text-zinc-500">Brand Account</p>
           </div>
         </div>

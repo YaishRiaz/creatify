@@ -30,48 +30,53 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [checking, setChecking] = useState(true)
-  const [timedOut, setTimedOut] = useState(false)
-  const [authedUser, setAuthedUser] = useState<{ id: string; full_name?: string; email?: string; role?: string } | null>(null)
+  const [userName, setUserName] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTimedOut(true)
-      setChecking(false)
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'INITIAL_SESSION') {
+          if (!session) {
+            window.location.href = '/auth/login'
+            return
+          }
+
+          const role = session.user.user_metadata?.role || 'creator'
+          const name = session.user.user_metadata?.full_name || session.user.email || ''
+
+          setUserName(name)
+
+          if (role === 'brand') {
+            window.location.href = '/brand/dashboard'
+            return
+          }
+
+          supabase
+            .from('creator_profiles')
+            .select('wallet_balance')
+            .eq('user_id', session.user.id)
+            .single()
+            .then(({ data }) => {
+              if (data) setWalletBalance(data.wallet_balance || 0)
+            })
+
+          setChecking(false)
+        }
+
+        if (event === 'SIGNED_OUT') {
+          window.location.href = '/auth/login'
+        }
+      })
+
+    const timeout = setTimeout(() => {
+      window.location.href = '/auth/login'
     }, 5000)
-    return () => clearTimeout(timer)
-  }, [])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        window.location.href = '/auth/login'
-        return
-      }
-
-      const role = session.user.user_metadata?.role || 'creator'
-
-      if (role === 'brand') {
-        window.location.href = '/brand/dashboard'
-        return
-      }
-
-      setAuthedUser({ id: session.user.id, email: session.user.email, role, full_name: session.user.user_metadata?.full_name })
-      setChecking(false)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (!authedUser) return
-    const fetchBalance = async () => {
-      const { data } = await supabase
-        .from('creator_profiles')
-        .select('wallet_balance')
-        .eq('user_id', authedUser.id)
-        .single()
-      if (data) setWalletBalance(data.wallet_balance ?? 0)
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timeout)
     }
-    fetchBalance()
-  }, [authedUser])
+  }, [])
 
   if (checking) {
     return (
@@ -90,11 +95,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
     )
   }
 
-  if (!authedUser) return null
-
-  const user = authedUser
-
-  const initials = getInitials(user.full_name || user.email || 'C')
+  const initials = getInitials(userName || 'C')
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -146,7 +147,7 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
             {initials}
           </div>
           <div className="min-w-0">
-            <p className="text-sm text-white font-medium truncate">{user.full_name || user.email}</p>
+            <p className="text-sm text-white font-medium truncate">{userName}</p>
             <p className="text-xs text-zinc-500">Creator Account</p>
           </div>
         </div>
