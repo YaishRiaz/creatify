@@ -1,69 +1,85 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase-client'
 import type { User } from '@/types'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 export function useUser() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // useEffect only runs in browser, never on server
-    // This makes it safe for static generation
-    let isMounted = true
-    const supabase = getSupabase()
+    if (typeof window === 'undefined') return
 
-    const getUser = async () => {
+    let mounted = true
+    const supabase = getSupabaseClient()
+
+    const loadUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
 
-        if (session?.user && isMounted) {
-          const { data } = await supabase
-            .from('users')
-            .select('id, email, full_name, role, phone, is_verified, created_at')
-            .eq('id', session.user.id)
-            .single()
-          if (isMounted) setUser(data)
+        if (!session?.user) {
+          if (mounted) {
+            setUser(null)
+            setLoading(false)
+          }
+          return
         }
-      } catch (e) {
-        console.error('useUser error:', e)
-      } finally {
-        if (isMounted) setLoading(false)
+
+        const { data } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        if (mounted) {
+          setUser(data || null)
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('useUser error:', err)
+        if (mounted) setLoading(false)
       }
     }
 
-    getUser()
+    loadUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!isMounted) return
+      async (event, session) => {
+        if (!mounted) return
+
+        if (event === 'SIGNED_OUT' || !session) {
+          setUser(null)
+          setLoading(false)
+          return
+        }
+
         if (session?.user) {
           const { data } = await supabase
             .from('users')
-            .select('id, email, full_name, role, phone, is_verified, created_at')
+            .select('*')
             .eq('id', session.user.id)
             .single()
-          if (isMounted) setUser(data)
-        } else {
-          if (isMounted) setUser(null)
+          if (mounted) {
+            setUser(data || null)
+            setLoading(false)
+          }
         }
-        if (isMounted) setLoading(false)
       }
     )
 
     return () => {
-      isMounted = false
+      mounted = false
       subscription.unsubscribe()
     }
   }, [])
 
-  return { user, loading }
+  const signOut = async () => {
+    const supabase = getSupabaseClient()
+    await supabase.auth.signOut()
+    localStorage.removeItem('creatify-auth-token')
+    window.location.replace('/')
+  }
+
+  return { user, loading, signOut }
 }

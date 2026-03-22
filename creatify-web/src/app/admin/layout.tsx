@@ -17,7 +17,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
-import { createSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 
 const navItems = [
@@ -32,7 +32,7 @@ const navItems = [
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser()
+  const { user, loading, signOut } = useUser()
   const router = useRouter()
   const pathname = usePathname()
   const [fraudCount, setFraudCount] = useState(0)
@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return
-    const supabase = createSupabaseClient()
+    const supabase = getSupabaseClient()
     async function fetchCounts() {
       const [{ count: fc }, { count: pc }] = await Promise.all([
         supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'flagged'),
@@ -69,9 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!user || user.role !== 'admin') return null
 
   async function handleSignOut() {
-    const supabase = createSupabaseClient()
-    await supabase.auth.signOut()
-    router.push('/')
+    await signOut()
   }
 
   function isActive(href: string) {

@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -15,7 +15,6 @@ import {
   X,
 } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
-import { createSupabaseClient } from '@/lib/supabase'
 
 
 const navLinks = [
@@ -35,10 +34,9 @@ function getInitials(name: string): string {
 }
 
 export default function BrandLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser()
+  const { user, loading, signOut } = useUser()
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = useMemo(() => createSupabaseClient(), [])
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
@@ -46,11 +44,6 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
       router.push('/auth/login')
     }
   }, [loading, user, router])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-  }
 
   if (loading) {
     return (
@@ -107,7 +100,7 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         <button
-          onClick={handleSignOut}
+          onClick={signOut}
           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors"
         >
           <LogOut size={16} />

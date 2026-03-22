@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase-client'
 
 export default function LoginClient() {
   const [email, setEmail] = useState('')
@@ -22,64 +22,49 @@ export default function LoginClient() {
     try {
       const supabase = getSupabaseClient()
 
-      // Step 1: Sign in with Supabase Auth
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
 
       if (authError) {
-        if (authError.message.includes('Invalid login credentials')) {
-          setError('Incorrect email or password.')
-        } else if (authError.message.includes('Email not confirmed')) {
-          setError('Please verify your email before logging in.')
-        } else {
-          setError(authError.message)
-        }
+        setError(
+          authError.message.includes('Invalid login credentials')
+            ? 'Incorrect email or password.'
+            : authError.message
+        )
         setLoading(false)
         return
       }
 
-      if (!authData.user) {
+      if (!data.session || !data.user) {
         setError('Login failed. Please try again.')
         setLoading(false)
         return
       }
 
-      // Step 2: Get user role from public.users table
-      const { data: userData, error: userError } =
-        await supabase
-          .from('users')
-          .select('role')
-          .eq('id', authData.user.id)
-          .single()
+      // Get role from user metadata first (fastest)
+      const metaRole = data.user.user_metadata?.role
 
-      if (userError || !userData) {
-        // Fallback: check user metadata
-        const role = authData.user.user_metadata?.role
-        await new Promise(resolve => setTimeout(resolve, 500))
-        if (role === 'brand') {
-          window.location.href = '/brand/dashboard'
-        } else if (role === 'admin') {
-          window.location.href = '/admin'
-        } else {
-          window.location.href = '/creator/dashboard'
-        }
-        return
-      }
+      // Also try public.users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single()
 
-      // Step 3: Redirect based on role
-      // Small delay to ensure session cookie is written before navigating
-      if (userData.role === 'brand') {
-        await new Promise(resolve => setTimeout(resolve, 500))
-        window.location.href = '/brand/dashboard'
-      } else if (userData.role === 'admin') {
-        await new Promise(resolve => setTimeout(resolve, 500))
-        window.location.href = '/admin'
+      const finalRole = userData?.role || metaRole || 'creator'
+
+      // Store session explicitly in localStorage
+      localStorage.setItem('creatify-auth-token', JSON.stringify(data.session))
+
+      // Hard redirect based on role
+      if (finalRole === 'brand') {
+        window.location.replace('/brand/dashboard')
+      } else if (finalRole === 'admin') {
+        window.location.replace('/admin')
       } else {
-        await new Promise(resolve => setTimeout(resolve, 500))
-        window.location.href = '/creator/dashboard'
+        window.location.replace('/creator/dashboard')
       }
 
     } catch (err) {

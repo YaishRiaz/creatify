@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
-import { createClient } from "@supabase/supabase-js";
 
 const navLinks = [
   { label: "How it works", href: "#how-it-works" },
@@ -22,8 +20,7 @@ function getDashboardRoute(role?: string) {
 }
 
 export default function Navbar() {
-  const router = useRouter();
-  const { user, loading } = useUser();
+  const { user, loading, signOut } = useUser();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,15 +31,6 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const handleSignOut = async () => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    await supabase.auth.signOut();
-    router.push("/");
-  };
 
   const displayName = user?.full_name || user?.email || "";
   const truncatedName =
@@ -78,7 +66,7 @@ export default function Navbar() {
         Dashboard
       </Link>
       <button
-        onClick={handleSignOut}
+        onClick={signOut}
         className="text-sm bg-zinc-800 text-zinc-300 px-4 py-2 hover:bg-zinc-700 hover:text-white transition-colors duration-200"
       >
         Sign Out
@@ -130,7 +118,7 @@ export default function Navbar() {
         Dashboard
       </Link>
       <button
-        onClick={() => { setMobileOpen(false); handleSignOut(); }}
+        onClick={() => { setMobileOpen(false); signOut(); }}
         className="text-sm text-center bg-zinc-800 text-zinc-300 px-4 py-3 hover:bg-zinc-700 transition-colors"
       >
         Sign Out
