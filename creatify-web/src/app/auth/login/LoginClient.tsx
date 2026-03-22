@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { getSupabaseClient } from '@/lib/supabase-client'
+import { supabase } from '@/lib/supabase-client'
 
 export default function LoginClient() {
   const [email, setEmail] = useState('')
@@ -20,52 +20,39 @@ export default function LoginClient() {
     setError('')
 
     try {
-      const supabase = getSupabaseClient()
-
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       })
 
-      if (authError) {
+      if (error) {
         setError(
-          authError.message.includes('Invalid login credentials')
+          error.message.includes('Invalid login credentials')
             ? 'Incorrect email or password.'
-            : authError.message
+            : error.message
         )
         setLoading(false)
         return
       }
 
-      if (!data.session || !data.user) {
+      if (!data.session) {
         setError('Login failed. Please try again.')
         setLoading(false)
         return
       }
 
-      // Manually store session to be safe
-      try {
-        localStorage.setItem('creatify-auth', JSON.stringify(data.session))
-        localStorage.setItem('creatify-auth-token', data.session.access_token)
-      } catch (e) {
-        console.error('Storage error:', e)
-      }
-
+      // Role from metadata — no extra DB call needed
       const role = data.user.user_metadata?.role || 'creator'
 
-      // Give storage time to write
-      await new Promise(r => setTimeout(r, 300))
-
       if (role === 'brand') {
-        window.location.replace('/brand/dashboard')
+        window.location.href = '/brand/dashboard'
       } else if (role === 'admin') {
-        window.location.replace('/admin')
+        window.location.href = '/admin'
       } else {
-        window.location.replace('/creator/dashboard')
+        window.location.href = '/creator/dashboard'
       }
 
     } catch (err) {
-      console.error('Login error:', err)
       setError('Something went wrong. Please try again.')
       setLoading(false)
     }

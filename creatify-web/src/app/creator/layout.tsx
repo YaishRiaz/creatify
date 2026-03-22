@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Search, ListTodo, Wallet, User, LogOut, Menu, X,
 } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
-import { getSupabaseClient } from '@/lib/supabase-client'
+import { supabase } from '@/lib/supabase-client'
 
 
 const navLinks = [
@@ -42,77 +42,27 @@ export default function CreatorLayout({ children }: { children: React.ReactNode 
   }, [])
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Small delay to ensure localStorage is ready
-        await new Promise(r => setTimeout(r, 100))
-
-        const supabase = getSupabaseClient()
-
-        const { data: { session }, error } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error('Session error:', error)
-        }
-
-        if (session?.user) {
-          const role = session.user.user_metadata?.role || 'creator'
-
-          if (role === 'brand') {
-            window.location.replace('/brand/dashboard')
-            return
-          }
-
-          setAuthedUser({ id: session.user.id, email: session.user.email, role, full_name: session.user.user_metadata?.full_name })
-          setChecking(false)
-          return
-        }
-
-        // No session — try to recover from localStorage
-        try {
-          const stored = localStorage.getItem('creatify-auth')
-          if (stored) {
-            const parsed = JSON.parse(stored)
-            if (parsed?.access_token) {
-              const { data: refreshed } = await supabase.auth.setSession({
-                access_token: parsed.access_token,
-                refresh_token: parsed.refresh_token,
-              })
-
-              if (refreshed.session) {
-                const role = refreshed.session.user.user_metadata?.role || 'creator'
-
-                if (role === 'brand') {
-                  window.location.replace('/brand/dashboard')
-                  return
-                }
-
-                setAuthedUser({ id: refreshed.session.user.id, email: refreshed.session.user.email, role, full_name: refreshed.session.user.user_metadata?.full_name })
-                setChecking(false)
-                return
-              }
-            }
-          }
-        } catch (storageErr) {
-          console.error('Storage recovery failed:', storageErr)
-        }
-
-        // Truly no session
-        window.location.replace('/auth/login')
-
-      } catch (err) {
-        console.error('Auth check failed:', err)
-        window.location.replace('/auth/login')
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = '/auth/login'
+        return
       }
-    }
 
-    checkAuth()
+      const role = session.user.user_metadata?.role || 'creator'
+
+      if (role === 'brand') {
+        window.location.href = '/brand/dashboard'
+        return
+      }
+
+      setAuthedUser({ id: session.user.id, email: session.user.email, role, full_name: session.user.user_metadata?.full_name })
+      setChecking(false)
+    })
   }, [])
 
   useEffect(() => {
     if (!authedUser) return
     const fetchBalance = async () => {
-      const supabase = getSupabaseClient()
       const { data } = await supabase
         .from('creator_profiles')
         .select('wallet_balance')
