@@ -2,82 +2,87 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
-
-
-const schema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-})
-
-type FormData = z.infer<typeof schema>
-
-function mapAuthError(msg: string): string {
-  const lower = msg.toLowerCase()
-  if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
-    return 'Incorrect email or password.'
-  }
-  if (lower.includes('email not confirmed')) {
-    return 'Email not confirmed. Please contact support.'
-  }
-  if (lower.includes('too many requests')) {
-    return 'Too many attempts. Please wait a moment and try again.'
-  }
-  if (lower.includes('failed to fetch') || lower.includes('networkerror')) {
-    return 'Something went wrong. Please try again.'
-  }
-  return msg || 'Something went wrong. Please try again.'
-}
+import { getSupabaseClient } from '@/lib/supabase'
 
 export default function LoginClient() {
-  const router = useRouter()
-  const supabase = useMemo(() => createSupabaseClient(), [])
-  const [serverError, setServerError] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) })
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-  const onSubmit = async (data: FormData) => {
-    setServerError(null)
+    try {
+      const supabase = getSupabaseClient()
 
-    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    })
+      // Step 1: Sign in with Supabase Auth
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
 
-    if (signInError) {
-      setServerError(mapAuthError(signInError.message))
-      return
-    }
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          setError('Incorrect email or password.')
+        } else if (authError.message.includes('Email not confirmed')) {
+          setError('Please verify your email before logging in.')
+        } else {
+          setError(authError.message)
+        }
+        setLoading(false)
+        return
+      }
 
-    if (!authData.user) {
-      setServerError('Something went wrong. Please try again.')
-      return
-    }
+      if (!authData.user) {
+        setError('Login failed. Please try again.')
+        setLoading(false)
+        return
+      }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', authData.user.id)
-      .single()
+      // Step 2: Get user role from public.users table
+      const { data: userData, error: userError } =
+        await supabase
+          .from('users')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single()
 
-    if (userData?.role === 'brand') router.push('/brand/dashboard')
-    else if (userData?.role === 'creator') router.push('/creator/dashboard')
-    else if (userData?.role === 'admin') router.push('/admin/dashboard')
-    else {
-      // Account exists in auth but has no users row (e.g. created via Supabase dashboard)
-      setServerError('Account setup is incomplete. Please sign up to create your profile.')
+      if (userError || !userData) {
+        // Fallback: check user metadata
+        const role = authData.user.user_metadata?.role
+        if (role === 'brand') {
+          window.location.href = '/brand/dashboard'
+        } else if (role === 'admin') {
+          window.location.href = '/admin'
+        } else {
+          window.location.href = '/creator/dashboard'
+        }
+        return
+      }
+
+      // Step 3: Redirect based on role
+      // Use window.location.href for hard redirect
+      // This ensures the session cookie is set before navigating
+      if (userData.role === 'brand') {
+        window.location.href = '/brand/dashboard'
+      } else if (userData.role === 'admin') {
+        window.location.href = '/admin'
+      } else {
+        window.location.href = '/creator/dashboard'
+      }
+
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Something went wrong. Please try again.')
+      setLoading(false)
     }
   }
 
@@ -100,22 +105,21 @@ export default function LoginClient() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+        <form onSubmit={handleLogin} className="flex flex-col gap-5">
           {/* Email */}
           <div>
             <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">
               Email
             </label>
             <input
-              {...register('email')}
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               autoComplete="email"
+              required
               className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none px-4 py-3 text-sm text-white rounded-none placeholder:text-zinc-600 transition-colors"
             />
-            {errors.email && (
-              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
-            )}
           </div>
 
           {/* Password */}
@@ -133,10 +137,12 @@ export default function LoginClient() {
             </div>
             <div className="relative">
               <input
-                {...register('password')}
                 type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
                 autoComplete="current-password"
+                required
                 className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none px-4 py-3 pr-11 text-sm text-white rounded-none placeholder:text-zinc-600 transition-colors"
               />
               <button
@@ -148,25 +154,22 @@ export default function LoginClient() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            {errors.password && (
-              <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
-            )}
           </div>
 
-          {/* Server error */}
-          {serverError && (
+          {/* Error */}
+          {error && (
             <p className="text-red-400 text-sm border border-red-400/20 bg-red-400/5 px-4 py-3">
-              {serverError}
+              {error}
             </p>
           )}
 
           {/* Submit */}
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={loading}
             className="w-full bg-[#6C47FF] text-white py-4 text-base font-semibold rounded-none hover:bg-[#5538ee] transition-colors disabled:opacity-60 disabled:cursor-not-allowed min-h-[52px] flex items-center justify-center gap-2"
           >
-            {isSubmitting ? (
+            {loading ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
                 Signing in...
