@@ -5,194 +5,179 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
 import {
-  LayoutDashboard, Search, ListTodo, Wallet, User, LogOut, Menu, X,
+  LayoutDashboard, Search, ListTodo,
+  Wallet, User, LogOut, Menu, X
 } from 'lucide-react'
-import { useUser } from '@/hooks/useUser'
-import { supabase } from '@/lib/supabase-client'
 
-
-const navLinks = [
-  { label: 'Dashboard', href: '/creator/dashboard', icon: LayoutDashboard },
-  { label: 'Browse Campaigns', href: '/creator/campaigns', icon: Search },
-  { label: 'My Tasks', href: '/creator/tasks', icon: ListTodo },
-  { label: 'Wallet', href: '/creator/wallet', icon: Wallet },
-  { label: 'Profile', href: '/creator/profile', icon: User },
+const navItems = [
+  { href: '/creator/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/creator/campaigns', icon: Search, label: 'Browse Campaigns' },
+  { href: '/creator/tasks', icon: ListTodo, label: 'My Tasks' },
+  { href: '/creator/wallet', icon: Wallet, label: 'Wallet' },
+  { href: '/creator/profile', icon: User, label: 'Profile' },
 ]
 
-function getInitials(name: string): string {
-  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
-}
-
-export default function CreatorLayout({ children }: { children: React.ReactNode }) {
-  const { signOut } = useUser()
+export default function CreatorLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const pathname = usePathname()
+  const [ready, setReady] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [walletBalance, setWalletBalance] = useState<number | null>(null)
-  const [checking, setChecking] = useState(true)
   const [userName, setUserName] = useState('')
+  const [walletBalance, setWalletBalance] = useState(0)
 
   useEffect(() => {
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'INITIAL_SESSION') {
-          if (!session) {
-            window.location.href = '/auth/login'
-            return
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = '/auth/login'
+        return
+      }
+
+      const role = session.user.user_metadata?.role
+      if (role === 'brand') {
+        window.location.href = '/brand/dashboard'
+        return
+      }
+
+      const name =
+        session.user.user_metadata?.full_name ||
+        session.user.email || ''
+      setUserName(name)
+
+      supabase
+        .from('creator_profiles')
+        .select('wallet_balance')
+        .eq('user_id', session.user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.wallet_balance) {
+            setWalletBalance(data.wallet_balance)
           }
+        })
 
-          const role = session.user.user_metadata?.role || 'creator'
-          const name = session.user.user_metadata?.full_name || session.user.email || ''
-
-          setUserName(name)
-
-          if (role === 'brand') {
-            window.location.href = '/brand/dashboard'
-            return
-          }
-
-          supabase
-            .from('creator_profiles')
-            .select('wallet_balance')
-            .eq('user_id', session.user.id)
-            .single()
-            .then(({ data }) => {
-              if (data) setWalletBalance(data.wallet_balance || 0)
-            })
-
-          setChecking(false)
-        }
-
-        if (event === 'SIGNED_OUT') {
-          window.location.href = '/auth/login'
-        }
-      })
-
-    const timeout = setTimeout(() => {
-      window.location.href = '/auth/login'
-    }, 5000)
-
-    return () => {
-      subscription.unsubscribe()
-      clearTimeout(timeout)
-    }
+      setReady(true)
+    })
   }, [])
 
-  if (checking) {
+  const handleSignOut = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
+  if (!ready) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
-          <p className="text-zinc-500 text-sm">Loading your dashboard...</p>
-          <p className="text-zinc-700 text-xs mt-2">
-            Taking too long?{' '}
-            <a href="/auth/login" className="text-[#6C47FF] hover:underline">
-              Back to login
-            </a>
-          </p>
+          <p className="text-zinc-500 text-sm">Loading...</p>
         </div>
       </div>
     )
   }
 
-  const initials = getInitials(userName || 'C')
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] flex">
+      {/* Sidebar Desktop */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-full w-64 bg-[#111111] border-r border-zinc-800 flex-col z-40">
+        <div className="p-6 border-b border-zinc-800">
+          <Link href="/" className="text-[#6C47FF] font-black text-xl">Creatify</Link>
+        </div>
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="px-6 py-6 border-b border-zinc-800">
-        <Link href="/" className="font-syne text-xl font-extrabold text-[#6C47FF]">
-          Creatify
-        </Link>
-      </div>
-
-      <nav className="flex-1 px-3 py-6 flex flex-col gap-1">
-        {navLinks.map(({ label, href, icon: Icon }) => {
-          const active = pathname === href || (href !== '/creator/dashboard' && pathname.startsWith(href))
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
-                active
-                  ? 'bg-[#6C47FF]/10 text-white border-l-2 border-[#6C47FF] pl-[10px]'
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems.map(({ href, icon: Icon, label }) => (
+            <Link key={href} href={href}
+              className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                pathname === href || (href !== '/creator/dashboard' && pathname.startsWith(href))
+                  ? 'bg-[#6C47FF]/10 text-white border-l-2 border-[#6C47FF]'
                   : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <Icon size={16} />
+              }`}>
+              <Icon size={18} />
               {label}
             </Link>
-          )
-        })}
-      </nav>
+          ))}
+        </nav>
 
-      {/* Wallet mini widget */}
-      <div className="px-4 py-4 border-t border-zinc-800">
-        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Available Balance</p>
-        <p className="font-syne text-xl font-extrabold text-[#00E5A0] mb-2">
-          {walletBalance !== null ? `LKR ${walletBalance.toLocaleString('en-LK')}` : '—'}
-        </p>
-        <Link
-          href="/creator/wallet"
-          onClick={() => setMobileOpen(false)}
-          className="inline-block text-xs border border-[#00E5A0]/40 text-[#00E5A0] px-3 py-1.5 hover:bg-[#00E5A0]/10 transition-colors"
-        >
-          Cash Out
-        </Link>
-      </div>
-
-      <div className="px-3 py-4 border-t border-zinc-800">
-        <div className="flex items-center gap-3 px-3 mb-3">
-          <div className="w-8 h-8 rounded-full bg-[#00E5A0]/10 border border-[#00E5A0]/20 flex items-center justify-center text-xs font-bold text-[#00E5A0] shrink-0">
-            {initials}
+        <div className="p-4 border-t border-zinc-800">
+          <div className="bg-zinc-900 p-3 mb-3">
+            <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">
+              Available Balance
+            </p>
+            <p className="text-[#00E5A0] font-black text-xl">
+              LKR {walletBalance.toLocaleString()}
+            </p>
+            <Link href="/creator/wallet"
+              className="text-xs text-zinc-500 hover:text-white mt-1 block">
+              Cash Out →
+            </Link>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm text-white font-medium truncate">{userName}</p>
-            <p className="text-xs text-zinc-500">Creator Account</p>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#6C47FF]/20 flex items-center justify-center">
+              <span className="text-[#6C47FF] text-sm font-bold">
+                {userName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm truncate">{userName}</p>
+              <p className="text-zinc-500 text-xs">Creator</p>
+            </div>
+            <button onClick={handleSignOut} className="text-zinc-500 hover:text-white">
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-400 hover:text-white transition-colors"
-        >
-          <LogOut size={16} />
-          Sign Out
-        </button>
-      </div>
-    </div>
-  )
-
-  return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      <aside className="hidden md:flex fixed top-0 left-0 h-full w-64 bg-[#111111] border-r border-zinc-800 flex-col z-40">
-        <SidebarContent />
       </aside>
 
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#111111] border-b border-zinc-800 px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="font-syne text-lg font-extrabold text-[#6C47FF]">
-          Creatify
-        </Link>
-        <button
-          onClick={() => setMobileOpen((v) => !v)}
-          className="text-zinc-400 hover:text-white transition-colors"
-          aria-label="Toggle menu"
-        >
+      {/* Mobile Header */}
+      <header className="md:hidden fixed top-0 left-0 right-0 bg-[#111111] border-b border-zinc-800 z-40 flex items-center justify-between px-4 h-14">
+        <Link href="/" className="text-[#6C47FF] font-black text-lg">Creatify</Link>
+        <button onClick={() => setMobileOpen(!mobileOpen)}
+          className="text-zinc-400 hover:text-white">
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </header>
 
+      {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute top-14 left-0 bottom-0 w-64 bg-[#111111] border-r border-zinc-800">
-            <SidebarContent />
-          </aside>
+        <div className="md:hidden fixed inset-0 z-50 bg-black/80"
+          onClick={() => setMobileOpen(false)}>
+          <div className="absolute left-0 top-0 h-full w-64 bg-[#111111] border-r border-zinc-800 p-4"
+            onClick={e => e.stopPropagation()}>
+            <nav className="space-y-1 mt-14">
+              {navItems.map(({ href, icon: Icon, label }) => (
+                <Link key={href} href={href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-400 hover:text-white">
+                  <Icon size={18} />{label}
+                </Link>
+              ))}
+            </nav>
+            <button onClick={handleSignOut}
+              className="flex items-center gap-2 text-zinc-400 hover:text-white mt-8 px-4">
+              <LogOut size={16} />Sign Out
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="md:ml-64 pt-14 md:pt-0">
-        <main className="p-6 md:p-8">{children}</main>
-      </div>
+      {/* Content */}
+      <main className="flex-1 md:ml-64 pt-14 md:pt-0 min-h-screen">
+        <div className="p-6 md:p-8">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }

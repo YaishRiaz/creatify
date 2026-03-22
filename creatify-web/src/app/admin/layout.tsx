@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { createBrowserClient } from '@supabase/ssr'
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -16,9 +17,6 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react'
-import { useUser } from '@/hooks/useUser'
-import { supabase } from '@/lib/supabase-client'
-
 
 const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Overview' },
@@ -32,81 +30,67 @@ const navItems = [
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { signOut } = useUser()
   const pathname = usePathname()
+  const [ready, setReady] = useState(false)
+  const [userName, setUserName] = useState('')
   const [fraudCount, setFraudCount] = useState(0)
   const [payoutCount, setPayoutCount] = useState(0)
-  const [checking, setChecking] = useState(true)
-  const [userName, setUserName] = useState('')
 
   useEffect(() => {
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'INITIAL_SESSION') {
-          if (!session) {
-            window.location.href = '/auth/login'
-            return
-          }
-          const role = session.user.user_metadata?.role
-          if (role !== 'admin') {
-            window.location.href = '/'
-            return
-          }
-          setUserName(session.user.user_metadata?.full_name || session.user.email || '')
-          setChecking(false)
-        }
-        if (event === 'SIGNED_OUT') {
-          window.location.href = '/auth/login'
-        }
-      })
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    const timeout = setTimeout(() => {
-      window.location.href = '/auth/login'
-    }, 5000)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = '/auth/login'
+        return
+      }
 
-    return () => {
-      subscription.unsubscribe()
-      clearTimeout(timeout)
-    }
-  }, [])
+      const role = session.user.user_metadata?.role
+      if (role !== 'admin') {
+        window.location.href = '/'
+        return
+      }
 
-  useEffect(() => {
-    if (!userName) return
-    async function fetchCounts() {
-      const [{ count: fc }, { count: pc }] = await Promise.all([
+      setUserName(session.user.user_metadata?.full_name || session.user.email || '')
+
+      Promise.all([
         supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'flagged'),
         supabase.from('payouts').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-      ])
-      setFraudCount(fc ?? 0)
-      setPayoutCount(pc ?? 0)
-    }
-    fetchCounts()
-  }, [userName])
+      ]).then(([{ count: fc }, { count: pc }]) => {
+        setFraudCount(fc ?? 0)
+        setPayoutCount(pc ?? 0)
+      })
 
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
-          <p className="text-zinc-500 text-sm">Loading your dashboard...</p>
-          <p className="text-zinc-700 text-xs mt-2">
-            Taking too long?{' '}
-            <a href="/auth/login" className="text-[#6C47FF] hover:underline">
-              Back to login
-            </a>
-          </p>
-        </div>
-      </div>
+      setReady(true)
+    })
+  }, [])
+
+  const handleSignOut = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
-  }
-
-  async function handleSignOut() {
-    await signOut()
+    await supabase.auth.signOut()
+    window.location.href = '/'
   }
 
   function isActive(href: string) {
     if (href === '/admin') return pathname === '/admin'
     return pathname.startsWith(href)
+  }
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
