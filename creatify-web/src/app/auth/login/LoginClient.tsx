@@ -43,25 +43,22 @@ export default function LoginClient() {
         return
       }
 
-      // Get role from user metadata first (fastest)
-      const metaRole = data.user.user_metadata?.role
+      // Manually store session to be safe
+      try {
+        localStorage.setItem('creatify-auth', JSON.stringify(data.session))
+        localStorage.setItem('creatify-auth-token', data.session.access_token)
+      } catch (e) {
+        console.error('Storage error:', e)
+      }
 
-      // Also try public.users table
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single()
+      const role = data.user.user_metadata?.role || 'creator'
 
-      const finalRole = userData?.role || metaRole || 'creator'
+      // Give storage time to write
+      await new Promise(r => setTimeout(r, 300))
 
-      // Store session explicitly in localStorage
-      localStorage.setItem('creatify-auth-token', JSON.stringify(data.session))
-
-      // Hard redirect based on role
-      if (finalRole === 'brand') {
+      if (role === 'brand') {
         window.location.replace('/brand/dashboard')
-      } else if (finalRole === 'admin') {
+      } else if (role === 'admin') {
         window.location.replace('/admin')
       } else {
         window.location.replace('/creator/dashboard')

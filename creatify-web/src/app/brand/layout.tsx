@@ -53,47 +53,64 @@ export default function BrandLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Small delay to ensure localStorage is ready
+        await new Promise(r => setTimeout(r, 100))
+
         const supabase = getSupabaseClient()
 
-        const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
-        const sessionPromise = supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
 
-        const result = await Promise.race([sessionPromise, timeoutPromise])
-
-        if (!result || !('data' in result) || !result.data.session) {
-          window.location.replace('/auth/login')
-          return
+        if (error) {
+          console.error('Session error:', error)
         }
 
-        const session = result.data.session
-        const metaRole = session.user.user_metadata?.role
+        if (session?.user) {
+          const role = session.user.user_metadata?.role || 'brand'
 
-        if (metaRole) {
-          if (metaRole !== 'brand' && metaRole !== 'admin') {
+          if (role !== 'brand' && role !== 'admin') {
             window.location.replace('/creator/dashboard')
             return
           }
-          setAuthedUser({ id: session.user.id, email: session.user.email, role: metaRole, full_name: session.user.user_metadata?.full_name })
+
+          setAuthedUser({ id: session.user.id, email: session.user.email, role, full_name: session.user.user_metadata?.full_name })
           setChecking(false)
           return
         }
 
-        const { data: userData } = await Promise.race([
-          supabase.from('users').select('role, full_name, email').eq('id', session.user.id).single(),
-          new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 2000)),
-        ])
+        // No session — try to recover from localStorage
+        try {
+          const stored = localStorage.getItem('creatify-auth')
+          if (stored) {
+            const parsed = JSON.parse(stored)
+            if (parsed?.access_token) {
+              const { data: refreshed } = await supabase.auth.setSession({
+                access_token: parsed.access_token,
+                refresh_token: parsed.refresh_token,
+              })
 
-        const role = userData?.role || 'brand'
+              if (refreshed.session) {
+                const role = refreshed.session.user.user_metadata?.role || 'brand'
 
-        if (role !== 'brand' && role !== 'admin') {
-          window.location.replace('/creator/dashboard')
-          return
+                if (role !== 'brand' && role !== 'admin') {
+                  window.location.replace('/creator/dashboard')
+                  return
+                }
+
+                setAuthedUser({ id: refreshed.session.user.id, email: refreshed.session.user.email, role, full_name: refreshed.session.user.user_metadata?.full_name })
+                setChecking(false)
+                return
+              }
+            }
+          }
+        } catch (storageErr) {
+          console.error('Storage recovery failed:', storageErr)
         }
 
-        setAuthedUser({ id: session.user.id, email: userData?.email || session.user.email, role, full_name: userData?.full_name })
-        setChecking(false)
+        // Truly no session
+        window.location.replace('/auth/login')
+
       } catch (err) {
-        console.error('Auth check error:', err)
+        console.error('Auth check failed:', err)
         window.location.replace('/auth/login')
       }
     }
