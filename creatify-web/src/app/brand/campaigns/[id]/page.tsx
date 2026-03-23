@@ -50,7 +50,7 @@ export default function CampaignDetailPage() {
       .from('brand_profiles')
       .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!profile) {
       setError('Profile not found.')

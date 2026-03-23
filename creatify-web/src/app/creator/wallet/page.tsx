@@ -65,7 +65,7 @@ export default function CreatorWalletPage() {
     const fetchData = async () => {
       setLoading(true)
       const { data: prof } = await supabase
-        .from('creator_profiles').select('id, wallet_balance, total_earned').eq('user_id', user.id).single()
+        .from('creator_profiles').select('id, wallet_balance, total_earned').eq('user_id', user.id).maybeSingle()
       if (prof) {
         setProfile({ ...prof, wallet_balance: prof.wallet_balance ?? 0, total_earned: prof.total_earned ?? 0 })
 

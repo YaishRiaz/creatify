@@ -32,11 +32,15 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [ready, setReady] = useState(false)
+  const [initialized, setInitialized] = useState(false)
   const [userName, setUserName] = useState('')
   const [fraudCount, setFraudCount] = useState(0)
   const [payoutCount, setPayoutCount] = useState(0)
 
   useEffect(() => {
+    if (initialized) return
+    setInitialized(true)
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

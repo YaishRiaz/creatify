@@ -49,7 +49,7 @@ export default function BrowseCampaignsPage() {
       setLoading(true); setError(null)
 
       const { data: profile } = await supabase
-        .from('creator_profiles').select('id').eq('user_id', user.id).single()
+        .from('creator_profiles').select('id').eq('user_id', user.id).maybeSingle()
       if (!profile) { setError('Profile not found.'); setLoading(false); return }
       setCreatorProfileId(profile.id)
 

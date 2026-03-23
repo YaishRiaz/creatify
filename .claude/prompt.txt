@@ -1,58 +1,121 @@
-Revert creatify-web build config back to 
-standard Next.js for Vercel deployment.
+Fix two issues in creatify-web:
 
-STEP 1 — Update wrangler.toml (keep for reference only)
-This file won't be used by Vercel.
+ISSUE 1 — Replace ALL .single() calls on 
+creator_profiles, brand_profiles, and users 
+tables with .maybeSingle()
 
-STEP 2 — Update package.json scripts back to simple:
-"scripts": {
-  "build": "next build",
-  "dev": "next dev",
-  "start": "next start"
+.single() throws a 406 error when no row found
+.maybeSingle() returns null instead — safe
+
+Search entire codebase for:
+.single()
+
+Replace every instance that queries these tables:
+- creator_profiles
+- brand_profiles  
+- users
+
+With:
+.maybeSingle()
+
+Example:
+BEFORE: .eq('user_id', session.user.id).single()
+AFTER:  .eq('user_id', session.user.id).maybeSingle()
+
+ISSUE 2 — Multiple GoTrueClient instances
+
+Add this to the top of each layout file and 
+the login page to prevent multiple instances.
+
+In src/app/creator/layout.tsx at the top 
+of the useEffect, add a ref guard:
+
+Add state: const [initialized, setInitialized] = useState(false)
+
+Wrap the useEffect body:
+useEffect(() => {
+  if (initialized) return
+  setInitialized(true)
+  
+  // ... rest of auth check
+}, [])
+
+Do the same in brand/layout.tsx and admin/layout.tsx
+
+ISSUE 3 — Failed to load profile
+
+In src/app/creator/dashboard/page.tsx
+Find where creator_profiles is fetched and 
+add proper null handling:
+
+const { data: profile } = await supabase
+  .from('creator_profiles')
+  .select('id, wallet_balance, total_earned')
+  .eq('user_id', session.user.id)
+  .maybeSingle()  // ← use maybeSingle not single
+
+// If no profile exists create one
+if (!profile) {
+  const { data: newProfile } = await supabase
+    .from('creator_profiles')
+    .insert({
+      user_id: session.user.id,
+      platforms: {},
+      wallet_balance: 0,
+      total_earned: 0,
+      is_suspended: false,
+    })
+    .select()
+    .single()
+  
+  // Use newProfile or defaults
+  setWalletBalance(0)
+  setTotalEarned(0)
+} else {
+  setWalletBalance(profile.wallet_balance || 0)
+  setTotalEarned(profile.total_earned || 0)
 }
 
-STEP 3 — Update next.config.ts
-Replace with clean config:
+Apply the same null-safe profile creation pattern 
+in creator/layout.tsx wallet balance fetch.
 
-import type { NextConfig } from 'next'
+ISSUE 4 — Also update the signup API route
+src/app/api/auth/signup/route.ts
 
-const nextConfig: NextConfig = {
-  experimental: {
-    optimizePackageImports: ['lucide-react'],
-  },
-  optimizeFonts: false,
+Make sure when a creator signs up it ALWAYS 
+creates a creator_profiles row.
+
+After creating the auth user add:
+const { error: profileError } = await supabaseAdmin
+  .from('creator_profiles')
+  .upsert({
+    user_id: userId,
+    platforms: {},
+    wallet_balance: 0,
+    total_earned: 0,
+    is_suspended: false,
+  }, { onConflict: 'user_id' })
+
+if (profileError) {
+  console.error('Creator profile creation failed:', profileError)
 }
 
-export default nextConfig
+And for brands:
+const { error: brandProfileError } = await supabaseAdmin
+  .from('brand_profiles')
+  .upsert({
+    user_id: userId,
+    company_name: company_name || '',
+    industry: industry || '',
+  }, { onConflict: 'user_id' })
 
-STEP 4 — Remove edge runtime from PAGE files only
-Keep export const runtime = 'edge' ONLY in 
-files inside src/app/api/
+Run: npm run build
+Fix all errors.
 
-Remove export const runtime = 'edge' from 
-ALL page files:
-- src/app/page.tsx
-- src/app/layout.tsx  
-- src/app/not-found.tsx (delete this file)
-- src/app/auth/login/page.tsx
-- src/app/auth/signup/page.tsx
-- src/app/auth/forgot-password/page.tsx
-- src/app/brand/**/page.tsx and layout.tsx
-- src/app/creator/**/page.tsx and layout.tsx
-- src/app/admin/**/page.tsx and layout.tsx
-
-Keep export const dynamic = 'force-dynamic' 
-in all those files — just remove the runtime line.
-
-STEP 5 — Run build:
-npm run build
-
-Must pass cleanly.
-
-STEP 6 — Commit:
+Commit:
 cd /d/creatify
 git add .
-git commit -m "chore: revert to standard Next.js build for Vercel"
+git commit -m "fix: maybeSingle, auto-create profiles, multiple client warning"
 git push origin develop
 git checkout main
 git merge develop

@@ -123,33 +123,32 @@ export async function POST(req: NextRequest) {
 
     // Step 3: Create role-specific profile
     if (role === 'brand') {
-      const { error: brandError } = await supabaseAdmin
+      const { error: brandProfileError } = await supabaseAdmin
         .from('brand_profiles')
-        .insert({
+        .upsert({
           user_id: userId,
           company_name: company_name || '',
           industry: industry || '',
-        })
+        }, { onConflict: 'user_id' })
 
-      if (brandError) {
-        console.error('Brand profile error:', brandError)
+      if (brandProfileError) {
+        console.error('Brand profile creation failed:', brandProfileError)
       }
     }
 
     if (role === 'creator') {
-      const { error: creatorError } = await supabaseAdmin
+      const { error: profileError } = await supabaseAdmin
         .from('creator_profiles')
-        .insert({
+        .upsert({
           user_id: userId,
-          nic_number: nic_number || null,
           platforms: {},
           wallet_balance: 0,
           total_earned: 0,
           is_suspended: false,
-        })
+        }, { onConflict: 'user_id' })
 
-      if (creatorError) {
-        console.error('Creator profile error:', creatorError)
+      if (profileError) {
+        console.error('Creator profile creation failed:', profileError)
       }
     }
 

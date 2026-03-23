@@ -42,7 +42,7 @@ export default function BrandCampaignsPage() {
         .from('brand_profiles')
         .select('id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
       if (!profile) { setLoading(false); return }
 
       const { data } = await supabase
