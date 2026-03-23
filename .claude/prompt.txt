@@ -1,113 +1,77 @@
-Fix two issues in creatify-web:
+Create a single shared browser client at 
+src/lib/supabase-browser.ts:
 
-ISSUE 1 — Replace ALL .single() calls on 
-creator_profiles, brand_profiles, and users 
-tables with .maybeSingle()
+import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-.single() throws a 406 error when no row found
-.maybeSingle() returns null instead — safe
+let browserClient: SupabaseClient | null = null
 
-Search entire codebase for:
-.single()
-
-Replace every instance that queries these tables:
-- creator_profiles
-- brand_profiles  
-- users
-
-With:
-.maybeSingle()
-
-Example:
-BEFORE: .eq('user_id', session.user.id).single()
-AFTER:  .eq('user_id', session.user.id).maybeSingle()
-
-ISSUE 2 — Multiple GoTrueClient instances
-
-Add this to the top of each layout file and 
-the login page to prevent multiple instances.
-
-In src/app/creator/layout.tsx at the top 
-of the useEffect, add a ref guard:
-
-Add state: const [initialized, setInitialized] = useState(false)
-
-Wrap the useEffect body:
-useEffect(() => {
-  if (initialized) return
-  setInitialized(true)
+export function getBrowserClient(): SupabaseClient {
+  if (typeof window === 'undefined') {
+    // Always create fresh on server
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  }
   
-  // ... rest of auth check
-}, [])
-
-Do the same in brand/layout.tsx and admin/layout.tsx
-
-ISSUE 3 — Failed to load profile
-
-In src/app/creator/dashboard/page.tsx
-Find where creator_profiles is fetched and 
-add proper null handling:
-
-const { data: profile } = await supabase
-  .from('creator_profiles')
-  .select('id, wallet_balance, total_earned')
-  .eq('user_id', session.user.id)
-  .maybeSingle()  // ← use maybeSingle not single
-
-// If no profile exists create one
-if (!profile) {
-  const { data: newProfile } = await supabase
-    .from('creator_profiles')
-    .insert({
-      user_id: session.user.id,
-      platforms: {},
-      wallet_balance: 0,
-      total_earned: 0,
-      is_suspended: false,
-    })
-    .select()
-    .single()
+  // Reuse same instance in browser
+  if (!browserClient) {
+    browserClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  }
   
-  // Use newProfile or defaults
-  setWalletBalance(0)
-  setTotalEarned(0)
-} else {
-  setWalletBalance(profile.wallet_balance || 0)
-  setTotalEarned(profile.total_earned || 0)
+  return browserClient
 }
 
-Apply the same null-safe profile creation pattern 
-in creator/layout.tsx wallet balance fetch.
+Now update EVERY file that currently has:
+createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
-ISSUE 4 — Also update the signup API route
-src/app/api/auth/signup/route.ts
+Replace with:
+import { getBrowserClient } from '@/lib/supabase-browser'
+const supabase = getBrowserClient()
 
-Make sure when a creator signs up it ALWAYS 
-creates a creator_profiles row.
+Files to update:
+- src/app/auth/login/page.tsx
+- src/app/auth/signup/page.tsx
+- src/app/creator/layout.tsx
+- src/app/brand/layout.tsx
+- src/app/admin/layout.tsx
+- src/app/creator/dashboard/page.tsx
+- src/app/creator/campaigns/page.tsx
+- src/app/creator/campaigns/[id]/page.tsx
+- src/app/creator/tasks/page.tsx
+- src/app/creator/wallet/page.tsx
+- src/app/creator/profile/page.tsx
+- src/app/brand/dashboard/page.tsx
+- src/app/brand/campaigns/page.tsx
+- src/app/brand/campaigns/[id]/page.tsx
+- src/app/brand/campaigns/create/page.tsx
+- src/app/brand/analytics/page.tsx
+- src/app/admin/page.tsx
+- src/app/admin/fraud/page.tsx
+- src/app/admin/payouts/page.tsx
+- src/hooks/useUser.ts
+- Any other file with createBrowserClient
 
-After creating the auth user add:
-const { error: profileError } = await supabaseAdmin
-  .from('creator_profiles')
-  .upsert({
-    user_id: userId,
-    platforms: {},
-    wallet_balance: 0,
-    total_earned: 0,
-    is_suspended: false,
-  }, { onConflict: 'user_id' })
+Also update src/lib/supabase-client.ts to use 
+the shared client:
 
-if (profileError) {
-  console.error('Creator profile creation failed:', profileError)
+export { getBrowserClient as getSupabaseClient } 
+  from './supabase-browser'
+export const supabase = {
+  get auth() { 
+    return getBrowserClient().auth 
+  },
+  from(table: string) { 
+    return getBrowserClient().from(table) 
+  }
 }
-
-And for brands:
-const { error: brandProfileError } = await supabaseAdmin
-  .from('brand_profiles')
-  .upsert({
-    user_id: userId,
-    company_name: company_name || '',
-    industry: industry || '',
-  }, { onConflict: 'user_id' })
 
 Run: npm run build
 Fix all errors.
@@ -115,7 +79,7 @@ Fix all errors.
 Commit:
 cd /d/creatify
 git add .
-git commit -m "fix: maybeSingle, auto-create profiles, multiple client warning"
+git commit -m "fix: single shared browser client, fix RLS 403"
 git push origin develop
 git checkout main
 git merge develop

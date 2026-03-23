@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase-browser'
 import {
   LayoutDashboard, Search, ListTodo,
   Wallet, User, LogOut, Menu, X
@@ -35,10 +35,7 @@ export default function CreatorLayout({
     if (initialized) return
     setInitialized(true)
 
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getBrowserClient()
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -73,11 +70,7 @@ export default function CreatorLayout({
   }, [])
 
   const handleSignOut = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    await supabase.auth.signOut()
+    await getBrowserClient().auth.signOut()
     window.location.href = '/'
   }
 
