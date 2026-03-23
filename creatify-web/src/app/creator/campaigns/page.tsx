@@ -2,311 +2,313 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Search, X, Clock } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
-import { useUser } from '@/hooks/useUser'
-import { formatLKR, formatNumber } from '@/lib/utils'
-import OnboardingGate from '@/components/creator/OnboardingGate'
-import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
-import type { Campaign } from '@/types'
+import { getBrowserClient } from '@/lib/supabase-browser'
+import { Search, Filter, Clock, Zap, Users } from 'lucide-react'
 
-
-interface CampaignTask {
+interface Campaign {
   id: string
-  total_views: number
-  total_earned: number
+  title: string
+  description: string
+  payout_rate: number
+  budget_total: number
+  budget_remaining: number
+  target_platforms: string[]
+  end_date: string
+  created_at: string
+  tasks?: { id: string; total_views: number }[]
+  brand?: { company_name: string }
 }
 
-interface CampaignWithMeta extends Campaign {
-  brand: { company_name: string; logo_url: string | null } | null
-  alreadyAccepted: boolean
-  tasks?: CampaignTask[]
-}
-
-const PLATFORM_BADGE: Record<string, string> = {
-  tiktok: 'bg-pink-500/10 text-pink-400',
-  instagram: 'bg-orange-500/10 text-orange-400',
-  youtube: 'bg-red-500/10 text-red-400',
-  facebook: 'bg-blue-500/10 text-blue-400',
-}
-
-type SortOption = 'payout_desc' | 'newest' | 'ending_soon' | 'budget_desc'
-
-function daysLeft(endDate: string): number {
-  return Math.max(0, Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000))
-}
-
-export default function BrowseCampaignsPage() {
-  const { user, loading: userLoading } = useUser()
-  const supabase = useMemo(() => createSupabaseClient(), [])
-
-  const [creatorProfileId, setCreatorProfileId] = useState<string | null>(null)
-  const [campaigns, setCampaigns] = useState<CampaignWithMeta[]>([])
+export default function CreatorCampaignsPage() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [platforms, setPlatforms] = useState<string[]>([])
-  const [sort, setSort] = useState<SortOption>('payout_desc')
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [platform, setPlatform] = useState('all')
 
   useEffect(() => {
-    if (userLoading || !user) return
-    const fetchData = async () => {
-      setLoading(true); setError(null)
+    const load = async () => {
+      try {
+        const supabase = getBrowserClient()
 
-      const { data: profile } = await supabase
-        .from('creator_profiles').select('id').eq('user_id', user.id).maybeSingle()
-      if (!profile) { setError('Profile not found.'); setLoading(false); return }
-      setCreatorProfileId(profile.id)
+        const { data: { session } } =
+          await supabase.auth.getSession()
 
-      const now = new Date().toISOString()
-      const { data: campData, error: campErr } = await supabase
-        .from('campaigns')
-        .select('*, brand:brand_profiles(company_name, logo_url), tasks:tasks(id, total_views, total_earned)')
-        .eq('status', 'active')
-        .eq('is_onboarding', false)
-        .gt('budget_remaining', 0)
-        .lte('start_date', now)
-        .gte('end_date', now)
-        .order('created_at', { ascending: false })
-      if (campErr) { setError('Failed to load campaigns.'); setLoading(false); return }
+        if (!session) {
+          window.location.href = '/auth/login'
+          return
+        }
 
-      const { data: myTasks } = await supabase
-        .from('tasks').select('campaign_id').eq('creator_id', profile.id)
-      const acceptedIds = new Set((myTasks ?? []).map((t: { campaign_id: string }) => t.campaign_id))
+        const { data, error: fetchError } = await supabase
+          .from('campaigns')
+          .select(`
+            id,
+            title,
+            description,
+            payout_rate,
+            budget_total,
+            budget_remaining,
+            target_platforms,
+            end_date,
+            created_at,
+            tasks (id, total_views),
+            brand:brand_profiles (company_name)
+          `)
+          .eq('status', 'active')
+          .gt('budget_remaining', 0)
+          .order('created_at', { ascending: false })
 
-      setCampaigns(
-        (campData ?? []).map((c) => ({
-          ...c,
-          alreadyAccepted: acceptedIds.has(c.id),
-        })) as CampaignWithMeta[]
-      )
-      setLoading(false)
+        if (fetchError) {
+          console.error('Campaigns fetch error:', fetchError)
+          setError('Failed to load campaigns: ' + fetchError.message)
+        } else {
+          setCampaigns(
+            (data || []).map((c) => ({
+              ...c,
+              brand: Array.isArray(c.brand) ? (c.brand[0] ?? undefined) : c.brand,
+            })) as Campaign[]
+          )
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err)
+        setError('Something went wrong.')
+      } finally {
+        setLoading(false)
+      }
     }
-    fetchData()
-  }, [user, userLoading, supabase])
 
-  const togglePlatform = (p: string) =>
-    setPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p])
+    load()
+  }, [])
 
-  const filtered = useMemo(() => {
-    let list = [...campaigns]
-    if (platforms.length > 0)
-      list = list.filter((c) => c.target_platforms.some((p) => platforms.includes(p)))
-    if (search.trim())
-      list = list.filter(
-        (c) =>
-          c.title.toLowerCase().includes(search.toLowerCase()) ||
-          (c.brand?.company_name ?? '').toLowerCase().includes(search.toLowerCase())
-      )
-    switch (sort) {
-      case 'payout_desc': list.sort((a, b) => b.payout_rate - a.payout_rate); break
-      case 'newest': list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break
-      case 'ending_soon': list.sort((a, b) => new Date(a.end_date ?? '').getTime() - new Date(b.end_date ?? '').getTime()); break
-      case 'budget_desc': list.sort((a, b) => b.budget_remaining - a.budget_remaining); break
-    }
-    return list
-  }, [campaigns, platforms, sort, search])
+  const filtered = campaigns.filter(c => {
+    const matchSearch = search === '' ||
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.description?.toLowerCase().includes(search.toLowerCase())
+    const matchPlatform = platform === 'all' ||
+      c.target_platforms?.includes(platform)
+    return matchSearch && matchPlatform
+  })
 
-  if (!creatorProfileId) return null
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="w-8 h-8 border-2 border-[#6C47FF]
+        border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
-    <OnboardingGate creatorProfileId={creatorProfileId}>
-    <div className="font-sans">
-      <div className="mb-6">
-        <h1 className="font-syne text-3xl font-extrabold text-white">Browse Campaigns</h1>
-        <p className="text-zinc-500 text-sm mt-1">
-          {loading ? '—' : `${campaigns.length} campaigns paying right now`}
+    <div className="max-w-5xl mx-auto">
+
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-white mb-1">
+          Browse Campaigns
+        </h1>
+        <p className="text-zinc-400">
+          Pick a campaign, post your content, earn per view.
         </p>
       </div>
 
-      {/* Filter bar */}
-      <div className="bg-[#111111] border border-zinc-800 p-4 mb-6 flex flex-wrap gap-3 items-center">
-        {/* Platform filters */}
-        <div className="flex flex-wrap gap-2">
-          {['TikTok', 'Instagram', 'YouTube', 'Facebook'].map((p) => {
-            const key = p.toLowerCase()
-            const active = platforms.includes(key)
-            return (
-              <button
-                key={p}
-                onClick={() => togglePlatform(key)}
-                className={`text-xs px-3 py-1.5 transition-colors ${active ? 'bg-[#6C47FF] text-white' : 'border border-zinc-700 text-zinc-400 hover:text-white'}`}
-              >
-                {p}
-              </button>
-            )
-          })}
+      {error && (
+        <div className="bg-red-950/20 border border-red-800/30
+        px-4 py-3 mb-6 text-sm text-red-400">
+          {error}
         </div>
+      )}
 
-        {/* Sort */}
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortOption)}
-          className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs px-3 py-1.5 outline-none focus:border-[#6C47FF]"
-        >
-          <option value="payout_desc">Highest payout rate</option>
-          <option value="newest">Newest first</option>
-          <option value="ending_soon">Ending soon</option>
-          <option value="budget_desc">Most budget remaining</option>
-        </select>
-
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2
+          -translate-y-1/2 text-zinc-500" />
           <input
+            type="text"
+            placeholder="Search campaigns..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search campaigns or brands…"
-            className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none pl-8 pr-8 py-1.5 text-xs text-white placeholder:text-zinc-600 transition-colors"
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-[#111111] border border-zinc-800
+            text-white pl-9 pr-4 py-3 text-sm
+            focus:outline-none focus:border-[#6C47FF]
+            transition-colors"
           />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
-              <X size={12} />
-            </button>
-          )}
+        </div>
+        <div className="relative">
+          <Filter size={16} className="absolute left-3 top-1/2
+          -translate-y-1/2 text-zinc-500" />
+          <select
+            value={platform}
+            onChange={e => setPlatform(e.target.value)}
+            className="bg-[#111111] border border-zinc-800
+            text-white pl-9 pr-8 py-3 text-sm
+            focus:outline-none focus:border-[#6C47FF]
+            appearance-none transition-colors"
+          >
+            <option value="all">All Platforms</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
+          </select>
         </div>
       </div>
 
-      {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-6">{error}</div>}
+      {/* Results count */}
+      <p className="text-zinc-500 text-sm mb-4">
+        {filtered.length} campaign{filtered.length !== 1 ? 's' : ''} available
+      </p>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1,2,3,4,5,6].map((i) => <div key={i} className="h-72 bg-zinc-800/50 animate-pulse" />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Search size={64} className="text-zinc-700 mb-4" />
-          <p className="font-syne text-xl font-bold text-white mb-2">No campaigns match your filters</p>
-          <button
-            onClick={() => { setPlatforms([]); setSearch('') }}
-            className="text-sm text-[#6C47FF] hover:text-white transition-colors"
-          >
-            Clear filters
-          </button>
+      {/* Campaign Cards */}
+      {filtered.length === 0 ? (
+        <div className="bg-[#111111] border border-zinc-800
+        p-16 text-center">
+          <Search size={48} className="text-zinc-700 mx-auto mb-4" />
+          <p className="text-zinc-400 mb-1">No campaigns found</p>
+          <p className="text-zinc-600 text-sm">
+            Try adjusting your filters or check back later.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((c) => {
-            const budgetPercent = c.budget_total > 0
-              ? ((c.budget_total - c.budget_remaining) / c.budget_total) * 100
-              : 0
-            const days = c.end_date ? daysLeft(c.end_date) : null
-            const creatorCount = c.tasks?.length || 0
-            const totalViews = (c.tasks ?? []).reduce((sum: number, t: CampaignTask) => sum + (t.total_views || 0), 0)
+        <div className="grid gap-4">
+          {filtered.map(campaign => {
+            const creatorCount = campaign.tasks?.length || 0
+            const totalViews = campaign.tasks?.reduce(
+              (sum, t) => sum + (t.total_views || 0), 0
+            ) || 0
+            const budgetUsed = campaign.budget_total -
+              campaign.budget_remaining
+            const budgetPercent = Math.min(
+              (budgetUsed / campaign.budget_total) * 100, 100
+            )
+            const daysLeft = Math.max(0, Math.ceil(
+              (new Date(campaign.end_date).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24)
+            ))
 
             const urgencyBadge =
-              budgetPercent > 80 ? { text: '⚡ Almost full', cls: 'bg-red-500/10 text-red-400' } :
-              days !== null && days <= 3 ? { text: `⏰ ${days}d left`, cls: 'bg-amber-500/10 text-amber-400' } :
-              creatorCount === 0 ? { text: '🆕 Be first', cls: 'bg-[#6C47FF]/10 text-[#6C47FF]' } : null
+              budgetPercent > 80
+                ? { text: '⚡ Almost full', cls: 'bg-red-500/10 text-red-400' }
+              : daysLeft <= 3 && daysLeft > 0
+                ? { text: `⏰ ${daysLeft}d left`, cls: 'bg-amber-500/10 text-amber-400' }
+              : creatorCount === 0
+                ? { text: '🆕 Be first', cls: 'bg-[#6C47FF]/10 text-[#6C47FF]' }
+              : null
 
             return (
-              <Link
-                key={c.id}
-                href={`/creator/campaigns/${c.id}`}
-                className="bg-[#111111] border border-zinc-800 hover:border-zinc-600 transition-colors duration-200 p-6 flex flex-col gap-3 cursor-pointer relative"
-              >
-                {/* Top row */}
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm text-zinc-400">{c.brand?.company_name}</p>
-                  <div className="flex gap-1 shrink-0 flex-wrap justify-end">
-                    {c.alreadyAccepted && (
-                      <span className="text-xs bg-green-500/10 text-[#00E5A0] px-2 py-0.5">✓ Accepted</span>
-                    )}
-                    {urgencyBadge && !c.alreadyAccepted && (
-                      <span className={`text-xs px-2 py-0.5 ${urgencyBadge.cls}`}>{urgencyBadge.text}</span>
-                    )}
-                  </div>
-                </div>
+              <Link key={campaign.id}
+                href={`/creator/campaigns/${campaign.id}`}
+                className="block bg-[#111111] border border-zinc-800
+                p-6 hover:border-zinc-600 transition-colors group relative">
 
-                <h3 className="font-syne text-lg font-bold text-white line-clamp-2 leading-tight">{c.title}</h3>
+                {/* Urgency badge */}
+                {urgencyBadge && (
+                  <span className={`absolute top-4 right-4
+                  text-xs px-2 py-1 ${urgencyBadge.cls}`}>
+                    {urgencyBadge.text}
+                  </span>
+                )}
+
+                {/* Brand name */}
+                {campaign.brand?.company_name && (
+                  <p className="text-zinc-500 text-xs uppercase
+                  tracking-wider mb-2">
+                    {campaign.brand.company_name}
+                  </p>
+                )}
+
+                {/* Title */}
+                <h2 className="text-white font-bold text-lg mb-2
+                group-hover:text-[#6C47FF] transition-colors pr-24">
+                  {campaign.title}
+                </h2>
+
+                {/* Description */}
+                <p className="text-zinc-400 text-sm mb-4
+                line-clamp-2">
+                  {campaign.description}
+                </p>
 
                 {/* Platform badges */}
-                <div className="flex flex-wrap gap-1">
-                  {c.target_platforms.map((p) => (
-                    <span key={p} className={`text-xs px-2 py-0.5 capitalize ${PLATFORM_BADGE[p] ?? 'bg-zinc-800 text-zinc-400'}`}>{p}</span>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {campaign.target_platforms?.map(p => (
+                    <span key={p}
+                      className="bg-zinc-900 border border-zinc-700
+                      px-2 py-1 text-xs text-zinc-300 capitalize">
+                      {p}
+                    </span>
                   ))}
                 </div>
 
-                {/* Payout highlight */}
-                <div>
-                  <p className="font-syne text-3xl font-extrabold text-[#00E5A0]">
-                    {formatLKR(c.payout_rate)}
-                  </p>
-                  <p className="text-xs text-zinc-500">per 1,000 views</p>
-                </div>
-
-                {/* Earnings examples */}
-                <div className="bg-zinc-900 p-3">
-                  <p className="text-xs text-zinc-500 mb-2">At this rate:</p>
-                  <div className="grid grid-cols-3 gap-1 text-xs">
-                    {[10000, 50000, 100000].map((v) => (
-                      <div key={v} className="text-center">
-                        <p className="text-zinc-400">{formatNumber(v)}</p>
-                        <p className="text-[#00E5A0] font-medium">{formatLKR(Math.round((c.payout_rate * v) / 1000 * 100) / 100)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Campaign Activity */}
-                <div className="mt-1 space-y-3">
-                  {/* Budget remaining bar */}
+                {/* Payout rate */}
+                <div className="flex items-center gap-6 mb-4">
                   <div>
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-zinc-500">Budget remaining</span>
-                      <span className={
-                        budgetPercent > 80 ? 'text-red-400' :
-                        budgetPercent > 50 ? 'text-amber-400' :
-                        'text-[#00E5A0]'
-                      }>
-                        LKR {c.budget_remaining.toLocaleString()} left
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-zinc-800 w-full">
-                      <div
-                        className={`h-full transition-all ${
-                          budgetPercent > 80 ? 'bg-red-500' :
-                          budgetPercent > 50 ? 'bg-amber-500' :
-                          'bg-[#00E5A0]'
-                        }`}
-                        style={{ width: `${100 - budgetPercent}%` }}
-                      />
-                    </div>
+                    <p className="text-[#00E5A0] font-black text-xl">
+                      LKR {campaign.payout_rate}
+                    </p>
+                    <p className="text-zinc-500 text-xs">
+                      per 1,000 views
+                    </p>
                   </div>
-
-                  {/* Activity stats */}
-                  <div className="flex items-center gap-4 text-xs text-zinc-500">
+                  <div className="flex items-center gap-4
+                  text-xs text-zinc-500">
                     <span className="flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#6C47FF]" />
-                      {creatorCount} creator{creatorCount !== 1 ? 's' : ''} posting
+                      <Users size={12} />
+                      {creatorCount} posting
                     </span>
                     {totalViews > 0 && (
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#00E5A0]" />
-                        {totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}K` : totalViews} views delivered
+                        <Zap size={12} />
+                        {totalViews >= 1000
+                          ? `${(totalViews/1000).toFixed(1)}K`
+                          : totalViews} views
                       </span>
                     )}
-                    {budgetPercent > 75 && (
-                      <span className="text-amber-400 font-medium">Filling up fast</span>
+                    {daysLeft > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} />
+                        {daysLeft}d left
+                      </span>
                     )}
                   </div>
                 </div>
 
-                {/* Footer */}
-                <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
-                  {days !== null && (
-                    <span className="flex items-center gap-1"><Clock size={11} />{days} days left</span>
-                  )}
-                  <span className="text-[#6C47FF] ml-auto">View Campaign →</span>
+                {/* Budget progress bar */}
+                <div>
+                  <div className="flex justify-between
+                  text-xs mb-1.5">
+                    <span className="text-zinc-500">
+                      Budget remaining
+                    </span>
+                    <span className={
+                      budgetPercent > 80
+                        ? 'text-red-400'
+                        : 'text-[#00E5A0]'
+                    }>
+                      LKR {campaign.budget_remaining.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-zinc-800 w-full">
+                    <div
+                      className={`h-full transition-all ${
+                        budgetPercent > 80
+                          ? 'bg-red-500'
+                          : budgetPercent > 50
+                          ? 'bg-amber-500'
+                          : 'bg-[#00E5A0]'
+                      }`}
+                      style={{ width: `${100 - budgetPercent}%` }}
+                    />
+                  </div>
                 </div>
+
               </Link>
             )
           })}
         </div>
       )}
     </div>
-    </OnboardingGate>
   )
 }
