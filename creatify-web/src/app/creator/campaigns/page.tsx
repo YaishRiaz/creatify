@@ -13,9 +13,16 @@ import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
 import type { Campaign } from '@/types'
 
 
+interface CampaignTask {
+  id: string
+  total_views: number
+  total_earned: number
+}
+
 interface CampaignWithMeta extends Campaign {
   brand: { company_name: string; logo_url: string | null } | null
   alreadyAccepted: boolean
+  tasks?: CampaignTask[]
 }
 
 const PLATFORM_BADGE: Record<string, string> = {
@@ -56,7 +63,7 @@ export default function BrowseCampaignsPage() {
       const now = new Date().toISOString()
       const { data: campData, error: campErr } = await supabase
         .from('campaigns')
-        .select('*, brand:brand_profiles(company_name, logo_url)')
+        .select('*, brand:brand_profiles(company_name, logo_url), tasks:tasks(id, total_views, total_earned)')
         .eq('status', 'active')
         .eq('is_onboarding', false)
         .gt('budget_remaining', 0)
@@ -182,24 +189,33 @@ export default function BrowseCampaignsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((c) => {
-            const pct = c.budget_total > 0 ? (c.budget_remaining / c.budget_total) * 100 : 0
-            const barColor = pct < 30 ? 'bg-amber-500' : 'bg-[#00E5A0]'
+            const budgetPercent = c.budget_total > 0
+              ? ((c.budget_total - c.budget_remaining) / c.budget_total) * 100
+              : 0
             const days = c.end_date ? daysLeft(c.end_date) : null
+            const creatorCount = c.tasks?.length || 0
+            const totalViews = (c.tasks ?? []).reduce((sum: number, t: CampaignTask) => sum + (t.total_views || 0), 0)
+
+            const urgencyBadge =
+              budgetPercent > 80 ? { text: '⚡ Almost full', cls: 'bg-red-500/10 text-red-400' } :
+              days !== null && days <= 3 ? { text: `⏰ ${days}d left`, cls: 'bg-amber-500/10 text-amber-400' } :
+              creatorCount === 0 ? { text: '🆕 Be first', cls: 'bg-[#6C47FF]/10 text-[#6C47FF]' } : null
+
             return (
               <Link
                 key={c.id}
                 href={`/creator/campaigns/${c.id}`}
-                className="bg-[#111111] border border-zinc-800 hover:border-zinc-600 transition-colors duration-200 p-6 flex flex-col gap-3 cursor-pointer"
+                className="bg-[#111111] border border-zinc-800 hover:border-zinc-600 transition-colors duration-200 p-6 flex flex-col gap-3 cursor-pointer relative"
               >
                 {/* Top row */}
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm text-zinc-400">{c.brand?.company_name}</p>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex gap-1 shrink-0 flex-wrap justify-end">
                     {c.alreadyAccepted && (
                       <span className="text-xs bg-green-500/10 text-[#00E5A0] px-2 py-0.5">✓ Accepted</span>
                     )}
-                    {pct < 10 && !c.alreadyAccepted && (
-                      <span className="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5">⚠ Filling up</span>
+                    {urgencyBadge && !c.alreadyAccepted && (
+                      <span className={`text-xs px-2 py-0.5 ${urgencyBadge.cls}`}>{urgencyBadge.text}</span>
                     )}
                   </div>
                 </div>
@@ -234,14 +250,47 @@ export default function BrowseCampaignsPage() {
                   </div>
                 </div>
 
-                {/* Budget bar */}
-                <div>
-                  <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                    <span>Budget remaining</span>
-                    <span>{pct.toFixed(0)}%</span>
+                {/* Campaign Activity */}
+                <div className="mt-1 space-y-3">
+                  {/* Budget remaining bar */}
+                  <div>
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-zinc-500">Budget remaining</span>
+                      <span className={
+                        budgetPercent > 80 ? 'text-red-400' :
+                        budgetPercent > 50 ? 'text-amber-400' :
+                        'text-[#00E5A0]'
+                      }>
+                        LKR {c.budget_remaining.toLocaleString()} left
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-zinc-800 w-full">
+                      <div
+                        className={`h-full transition-all ${
+                          budgetPercent > 80 ? 'bg-red-500' :
+                          budgetPercent > 50 ? 'bg-amber-500' :
+                          'bg-[#00E5A0]'
+                        }`}
+                        style={{ width: `${100 - budgetPercent}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+
+                  {/* Activity stats */}
+                  <div className="flex items-center gap-4 text-xs text-zinc-500">
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#6C47FF]" />
+                      {creatorCount} creator{creatorCount !== 1 ? 's' : ''} posting
+                    </span>
+                    {totalViews > 0 && (
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00E5A0]" />
+                        {totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}K` : totalViews} views delivered
+                      </span>
+                    )}
+                    {budgetPercent > 75 && (
+                      <span className="text-amber-400 font-medium">Filling up fast</span>
+                    )}
                   </div>
                 </div>
 

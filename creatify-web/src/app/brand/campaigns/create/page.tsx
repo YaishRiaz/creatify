@@ -57,6 +57,7 @@ const step3Schema = z
 type Step1Data = z.infer<typeof step1Schema>
 type Step2Data = z.infer<typeof step2Schema>
 type Step3Data = z.infer<typeof step3Schema>
+type CampaignType = 'digital' | 'experience'
 
 interface AllData extends Step1Data, Step2Data, Step3Data {}
 
@@ -106,9 +107,13 @@ function StepIndicator({ current }: { current: number }) {
 function Step1({
   defaults,
   onNext,
+  campaignType,
+  onCampaignTypeChange,
 }: {
   defaults: Partial<Step1Data>
   onNext: (d: Step1Data) => void
+  campaignType: CampaignType
+  onCampaignTypeChange: (t: CampaignType) => void
 }) {
   const {
     register,
@@ -138,6 +143,76 @@ function Step1({
 
   return (
     <form onSubmit={handleSubmit(onNext)} className="flex flex-col gap-6">
+
+      {/* Campaign Type */}
+      <div className="mb-2">
+        <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-4">
+          Campaign Type
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Digital */}
+          <button
+            type="button"
+            onClick={() => onCampaignTypeChange('digital')}
+            className={`p-6 border text-left transition-colors ${
+              campaignType === 'digital'
+                ? 'border-[#6C47FF] bg-[#6C47FF]/5'
+                : 'border-zinc-800 bg-[#111111] hover:border-zinc-600'
+            }`}
+          >
+            <div className="text-2xl mb-3">📱</div>
+            <h3 className="text-white font-bold mb-1">Digital Campaign</h3>
+            <p className="text-zinc-400 text-sm">
+              Creators post from home. Works for apps, online stores, delivery, services, and anything digital.
+            </p>
+            <ul className="mt-3 space-y-1">
+              {[
+                'Creator uses or reviews your product',
+                'Posts from anywhere',
+                'Pay per view delivered',
+              ].map(point => (
+                <li key={point} className="text-xs text-zinc-500 flex items-center gap-2">
+                  <span className="text-[#00E5A0]">✓</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </button>
+
+          {/* Experience */}
+          <button
+            type="button"
+            onClick={() => onCampaignTypeChange('experience')}
+            className={`p-6 border text-left transition-colors ${
+              campaignType === 'experience'
+                ? 'border-[#00E5A0] bg-[#00E5A0]/5'
+                : 'border-zinc-800 bg-[#111111] hover:border-zinc-600'
+            }`}
+          >
+            <div className="text-2xl mb-3">🍽️</div>
+            <h3 className="text-white font-bold mb-1">Experience Campaign</h3>
+            <p className="text-zinc-400 text-sm">
+              For restaurants, clothing stores, salons, gyms and any business requiring physical presence.
+            </p>
+            <ul className="mt-3 space-y-1">
+              {[
+                'Creator visits your location',
+                'Submit receipt for reimbursement',
+                'Earn cashback if views target is hit',
+              ].map(point => (
+                <li key={point} className="text-xs text-zinc-500 flex items-center gap-2">
+                  <span className="text-[#00E5A0]">✓</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 bg-[#00E5A0]/5 border border-[#00E5A0]/20 px-3 py-2">
+              <p className="text-[#00E5A0] text-xs font-semibold">Coming soon — in beta</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
       {/* Title */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
@@ -241,7 +316,6 @@ function Step2({
     handleSubmit,
     watch,
     setValue,
-    getValues,
     formState: { errors },
   } = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
@@ -406,10 +480,24 @@ function Step3({
   defaults,
   onNext,
   onBack,
+  campaignType,
+  reimbursementCap,
+  setReimbursementCap,
+  minViewsForReimbursement,
+  setMinViewsForReimbursement,
+  travelAllowance,
+  setTravelAllowance,
 }: {
   defaults: Partial<Step3Data>
   onNext: (d: Step3Data) => void
   onBack: () => void
+  campaignType: CampaignType
+  reimbursementCap: string
+  setReimbursementCap: (v: string) => void
+  minViewsForReimbursement: string
+  setMinViewsForReimbursement: (v: string) => void
+  travelAllowance: string
+  setTravelAllowance: (v: string) => void
 }) {
   const {
     register,
@@ -430,10 +518,12 @@ function Step3({
   const rate = watch('payout_rate') || 0
   const budget = watch('budget_total') || 0
   const capEnabled = watch('per_creator_cap_enabled')
+  const perCreatorCap = watch('per_creator_cap') || 0
 
   const fee = budget * 0.15
   const pool = budget * 0.85
   const maxViews = rate > 0 ? Math.floor((pool / rate) * 1000) : 0
+  const showPerCreatorCap = budget >= 50000
 
   return (
     <form onSubmit={handleSubmit(onNext)} className="flex flex-col gap-8">
@@ -516,46 +606,155 @@ function Step3({
                 </p>
               </div>
             )}
+            {/* Budget-based earning hint */}
+            <div className="mt-4 pt-4 border-t border-zinc-800 text-xs text-zinc-500">
+              {!showPerCreatorCap ? (
+                <p>
+                  One creator can earn up to{' '}
+                  <span className="text-zinc-300 font-medium">{formatLKR(Math.round(pool))}</span>{' '}
+                  if they hit enough views
+                </p>
+              ) : capEnabled && perCreatorCap > 0 ? (
+                <p>
+                  Max per creator:{' '}
+                  <span className="text-zinc-300 font-medium">{formatLKR(perCreatorCap)}</span>
+                </p>
+              ) : null}
+            </div>
           </div>
         )}
       </div>
 
       {/* Per creator cap */}
-      <div>
-        <div className="flex items-center gap-3 mb-3">
-          <button
-            type="button"
-            onClick={() => setValue('per_creator_cap_enabled', !capEnabled)}
-            className={`w-10 h-5 rounded-full transition-colors relative ${capEnabled ? 'bg-[#6C47FF]' : 'bg-zinc-700'}`}
-            role="switch"
-            aria-checked={capEnabled}
-          >
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${capEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-          </button>
-          <label className="text-sm text-white">Limit max earnings per creator</label>
-        </div>
-        {capEnabled && (
-          <div>
-            <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">Maximum a single creator can earn</label>
-            <div className="relative w-56">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">LKR</span>
-              <input
-                {...register('per_creator_cap', { valueAsNumber: true })}
-                type="number"
-                min={500}
-                placeholder="5000"
-                className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none pl-14 pr-4 py-3 text-sm text-white rounded-none transition-colors"
-              />
+      {showPerCreatorCap ? (
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <label className="text-white font-semibold">Per-Creator Earning Limit</label>
+              <p className="text-zinc-500 text-sm mt-1">
+                Cap the maximum any single creator can earn. Distributes budget across more creators.
+              </p>
             </div>
-            <p className="text-xs text-zinc-500 mt-1">This distributes budget across more creators</p>
-            {errors.per_creator_cap && <p className="text-red-400 text-xs mt-1">{errors.per_creator_cap.message}</p>}
+            <input
+              type="checkbox"
+              checked={capEnabled}
+              onChange={e => setValue('per_creator_cap_enabled', e.target.checked)}
+              className="w-5 h-5"
+            />
           </div>
-        )}
-      </div>
+          {capEnabled && (
+            <div>
+              <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">Maximum a single creator can earn</label>
+              <div className="relative w-56">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-zinc-400">LKR</span>
+                <input
+                  {...register('per_creator_cap', { valueAsNumber: true })}
+                  type="number"
+                  min={500}
+                  placeholder="5000"
+                  className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none pl-14 pr-4 py-3 text-sm text-white rounded-none transition-colors"
+                />
+              </div>
+              <p className="text-xs text-zinc-500 mt-1">This distributes budget across more creators</p>
+              {errors.per_creator_cap && <p className="text-red-400 text-xs mt-1">{errors.per_creator_cap.message}</p>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-2 bg-[#6C47FF]/5 border border-[#6C47FF]/20 p-4">
+          <p className="text-zinc-300 text-sm">
+            <span className="text-[#6C47FF] font-semibold">No per-creator limit</span>
+            {' '}— For campaigns under LKR 50,000, a single high-performing creator can earn the full budget. This rewards the best content without artificial limits.
+          </p>
+          <p className="text-zinc-500 text-xs mt-2">
+            Per-creator caps are available for campaigns with a budget of LKR 50,000 or more.
+          </p>
+        </div>
+      )}
+
+      {/* Experience Settings */}
+      {campaignType === 'experience' && (
+        <div className="mt-2 space-y-4 bg-zinc-900/50 border border-zinc-800 p-6">
+          <h3 className="text-white font-semibold">Experience Settings</h3>
+
+          {/* Receipt reimbursement cap */}
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-zinc-400 mb-2">
+              Max Receipt Reimbursement per Creator (LKR)
+            </label>
+            <input
+              type="number"
+              value={reimbursementCap}
+              onChange={e => setReimbursementCap(e.target.value)}
+              placeholder="e.g. 1500"
+              className="w-full bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-none focus:border-[#6C47FF] outline-none transition-colors text-sm"
+            />
+            <p className="text-zinc-500 text-xs mt-2">
+              Creators submit their receipt. If they hit the minimum views, they get reimbursed up to this amount.
+            </p>
+          </div>
+
+          {/* Minimum views for reimbursement */}
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-zinc-400 mb-2">
+              Minimum Views to Unlock Reimbursement
+            </label>
+            <input
+              type="number"
+              value={minViewsForReimbursement}
+              onChange={e => setMinViewsForReimbursement(e.target.value)}
+              placeholder="e.g. 5000"
+              className="w-full bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-none focus:border-[#6C47FF] outline-none transition-colors text-sm"
+            />
+            <p className="text-zinc-500 text-xs mt-2">
+              Creator must hit this view count within 7 days of posting to receive reimbursement.
+            </p>
+          </div>
+
+          {/* Travel allowance */}
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-zinc-400 mb-2">
+              Travel Allowance per Creator — Optional (LKR)
+            </label>
+            <input
+              type="number"
+              value={travelAllowance}
+              onChange={e => setTravelAllowance(e.target.value)}
+              placeholder="e.g. 300 (leave empty for none)"
+              className="w-full bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-none focus:border-[#6C47FF] outline-none transition-colors text-sm"
+            />
+            <p className="text-zinc-500 text-xs mt-2">
+              Optional flat amount paid to any creator who submits verified content, regardless of views. Covers travel costs.
+            </p>
+          </div>
+
+          {/* How it works summary */}
+          <div className="bg-[#111111] border border-zinc-700 p-4 mt-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">How creators get paid</p>
+            <div className="space-y-2 text-xs text-zinc-400">
+              {[
+                ['#6C47FF', '1.', 'Creator visits your location and makes a purchase'],
+                ['#6C47FF', '2.', 'They post content and submit their receipt + post URL on Creatify'],
+                ['#6C47FF', '3.', 'Travel allowance (if set) credited to wallet immediately'],
+                ['#6C47FF', '4.', 'Per-view earnings accumulate as views come in'],
+                ['#00E5A0', '5.', 'If they hit minimum views within 7 days → receipt amount reimbursed (up to cap)'],
+              ].map(([color, num, text]) => (
+                <div key={num} className="flex items-start gap-2">
+                  <span style={{ color }} className="mt-0.5 shrink-0">{num}</span>
+                  {text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Min cashout info */}
+      {/* Minimum cashout is LKR 5,000 */}
+      {/* Changed from LKR 500 on March 2026 */}
+      {/* Bank transfer overhead too high for small amounts */}
       <div className="bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-zinc-400">
-        Creators can cash out from <span className="text-white font-medium">LKR 500</span>
+        Creators can cash out from <span className="text-white font-medium">LKR 5,000</span>
       </div>
 
       <div className="flex items-center justify-between pt-2">
@@ -720,6 +919,14 @@ export default function CreateCampaignPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // Campaign type state
+  const [campaignType, setCampaignType] = useState<CampaignType>('digital')
+
+  // Experience campaign state
+  const [reimbursementCap, setReimbursementCap] = useState('')
+  const [minViewsForReimbursement, setMinViewsForReimbursement] = useState('')
+  const [travelAllowance, setTravelAllowance] = useState('')
+
   const handleStep1 = (d: Step1Data) => {
     setFormData((prev) => ({ ...prev, ...d }))
     setStep(2)
@@ -738,6 +945,12 @@ export default function CreateCampaignPage() {
     setSubmitting(true)
     setSubmitError(null)
 
+    // TODO: Run this SQL in Supabase to add proper columns:
+    // ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS campaign_type VARCHAR(20) DEFAULT 'digital';
+    // ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS experience_reimbursement_cap DECIMAL(10,2);
+    // ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS experience_min_views BIGINT;
+    // ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS travel_allowance DECIMAL(10,2);
+
     const { data: profile } = await supabase
       .from('brand_profiles')
       .select('id')
@@ -750,10 +963,26 @@ export default function CreateCampaignPage() {
       return
     }
 
+    // Store experience data in description with JSON prefix
+    const experienceData = campaignType === 'experience' ? {
+      type: 'experience',
+      reimbursement_cap: reimbursementCap ? parseFloat(reimbursementCap) : null,
+      min_views_for_reimbursement: minViewsForReimbursement ? parseInt(minViewsForReimbursement) : null,
+      travel_allowance: travelAllowance ? parseFloat(travelAllowance) : null,
+    } : { type: 'digital' }
+
+    const descriptionWithMeta = `[CAMPAIGN_META]${JSON.stringify(experienceData)}\n${formData.description ?? ''}`
+
+    // Per-creator cap only available when budget >= 50,000
+    const budget = formData.budget_total ?? 0
+    const perCreatorCap = budget >= 50000 && formData.per_creator_cap_enabled
+      ? formData.per_creator_cap ?? null
+      : null
+
     const payload = {
       brand_id: profile.id,
       title: formData.title,
-      description: formData.description,
+      description: descriptionWithMeta,
       brief: formData.brief,
       do_list: formData.do_list?.filter(Boolean),
       dont_list: formData.dont_list?.filter(Boolean),
@@ -762,8 +991,11 @@ export default function CreateCampaignPage() {
       payout_rate: formData.payout_rate,
       budget_total: formData.budget_total,
       budget_remaining: formData.budget_total,
-      min_cashout: 500,
-      per_creator_cap: formData.per_creator_cap_enabled ? formData.per_creator_cap : null,
+      // Minimum cashout is LKR 5,000
+      // Changed from LKR 500 on March 2026
+      // Bank transfer overhead too high for small amounts
+      min_cashout: 5000,
+      per_creator_cap: perCreatorCap,
       start_date: formData.start_date,
       end_date: formData.end_date,
       status: 'pending_payment',
@@ -811,9 +1043,29 @@ export default function CreateCampaignPage() {
           </div>
         )}
 
-        {step === 1 && <Step1 defaults={formData} onNext={handleStep1} />}
+        {step === 1 && (
+          <Step1
+            defaults={formData}
+            onNext={handleStep1}
+            campaignType={campaignType}
+            onCampaignTypeChange={setCampaignType}
+          />
+        )}
         {step === 2 && <Step2 defaults={formData} onNext={handleStep2} onBack={() => setStep(1)} />}
-        {step === 3 && <Step3 defaults={formData} onNext={handleStep3} onBack={() => setStep(2)} />}
+        {step === 3 && (
+          <Step3
+            defaults={formData}
+            onNext={handleStep3}
+            onBack={() => setStep(2)}
+            campaignType={campaignType}
+            reimbursementCap={reimbursementCap}
+            setReimbursementCap={setReimbursementCap}
+            minViewsForReimbursement={minViewsForReimbursement}
+            setMinViewsForReimbursement={setMinViewsForReimbursement}
+            travelAllowance={travelAllowance}
+            setTravelAllowance={setTravelAllowance}
+          />
+        )}
         {step === 4 && (
           <Step4
             data={formData}

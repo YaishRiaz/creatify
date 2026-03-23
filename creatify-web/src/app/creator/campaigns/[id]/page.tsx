@@ -46,6 +46,8 @@ export default function CreatorCampaignDetailPage() {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('')
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [views, setViews] = useState(50000)
+  const [creatorCount, setCreatorCount] = useState(0)
+  const [totalViews, setTotalViews] = useState(0)
 
   useEffect(() => {
     if (userLoading || !user) return
@@ -68,6 +70,14 @@ export default function CreatorCampaignDetailPage() {
       const { data: task } = await supabase
         .from('tasks').select('*').eq('campaign_id', id).eq('creator_id', prof.id).maybeSingle()
       setExistingTask(task as Task | null)
+
+      // Fetch campaign activity stats
+      const { data: campaignTasks } = await supabase
+        .from('tasks')
+        .select('id, total_views')
+        .eq('campaign_id', id)
+      setCreatorCount(campaignTasks?.length || 0)
+      setTotalViews(campaignTasks?.reduce((sum, t) => sum + (t.total_views || 0), 0) || 0)
 
       setLoading(false)
     }
@@ -114,6 +124,9 @@ export default function CreatorCampaignDetailPage() {
 
   const pct = campaign.budget_total > 0 ? (campaign.budget_remaining / campaign.budget_total) * 100 : 0
   const days = campaign.end_date ? daysLeft(campaign.end_date) : null
+  const daysLeft_ = Math.max(0, Math.ceil(
+    (new Date(campaign.end_date ?? '').getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  ))
   const estimatedEarnings = Math.round((campaign.payout_rate * views) / 1000 * 100) / 100
 
   if (!profileLoaded || !creatorProfileId) return null
@@ -242,6 +255,45 @@ export default function CreatorCampaignDetailPage() {
 
         {/* Sidebar */}
         <div className="flex flex-col gap-4">
+          {/* Campaign Activity */}
+          <div className="bg-[#111111] border border-zinc-800 p-6">
+            <h3 className="text-xs uppercase tracking-wider text-zinc-500 mb-4">Campaign Activity</h3>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center">
+                <p className="text-2xl font-black text-white">{creatorCount}</p>
+                <p className="text-xs text-zinc-500 mt-1">Creators posting</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-black text-[#00E5A0]">
+                  {totalViews >= 1000 ? `${(totalViews / 1000).toFixed(1)}K` : totalViews}
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">Views delivered</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-black text-white">{daysLeft_}d</p>
+                <p className="text-xs text-zinc-500 mt-1">Days remaining</p>
+              </div>
+            </div>
+            {/* Budget remaining bar */}
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-zinc-500">Budget remaining</span>
+                <span className="text-white font-semibold">
+                  LKR {campaign.budget_remaining?.toLocaleString()}
+                </span>
+              </div>
+              <div className="h-2 bg-zinc-800 w-full">
+                <div
+                  className="h-full bg-[#00E5A0] transition-all"
+                  style={{ width: `${(campaign.budget_remaining / campaign.budget_total) * 100}%` }}
+                />
+              </div>
+              <p className="text-zinc-600 text-xs mt-1">
+                of LKR {campaign.budget_total?.toLocaleString()} total
+              </p>
+            </div>
+          </div>
+
           {/* Earnings calculator */}
           <div className="bg-[#111111] border border-zinc-800 p-6">
             <h2 className="font-syne font-bold text-white mb-4">Earnings Calculator</h2>
