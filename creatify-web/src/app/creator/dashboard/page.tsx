@@ -26,19 +26,25 @@ export default function CreatorDashboard() {
       // Use the singleton client
       const supabase = getBrowserClient()
 
-      // Step 1: Get session
-      const { data: { session }, error: sessionError } =
+      // DEBUG - remove after fixing
+      const { data: { session: debugSession } } =
         await supabase.auth.getSession()
+      console.log('=== DEBUG ===')
+      console.log('Session exists:', !!debugSession)
+      console.log('User ID:', debugSession?.user?.id)
+      console.log('Access token (first 20 chars):',
+        debugSession?.access_token?.substring(0, 20))
 
-      if (sessionError || !session) {
+      const userId = debugSession?.user?.id
+      if (!userId) {
+        console.error('NO SESSION - redirecting to login')
         window.location.href = '/auth/login'
         return
       }
 
-      const userId = session.user.id
       setUserName(
-        session.user.user_metadata?.full_name ||
-        session.user.email || 'Creator'
+        debugSession.user.user_metadata?.full_name ||
+        debugSession.user.email || 'Creator'
       )
 
       // Step 2: Get creator profile
@@ -49,6 +55,9 @@ export default function CreatorDashboard() {
           .select('id, wallet_balance, total_earned')
           .eq('user_id', userId)
           .maybeSingle()
+
+      console.log('Profile result:', profile)
+      console.log('Profile error:', profileError)
 
       if (profileError) {
         console.error('Profile error:', profileError)
