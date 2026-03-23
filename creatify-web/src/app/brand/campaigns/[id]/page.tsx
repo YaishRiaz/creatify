@@ -2,330 +2,382 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronLeft, Eye, Users, Wallet, TrendingDown } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
-import { useUser } from '@/hooks/useUser'
-import { formatNumber, formatLKR, formatDate, daysBetween } from '@/lib/utils'
-import type { Campaign, Task } from '@/types'
+import Link from 'next/link'
+import { createBrowserClient } from '@supabase/ssr'
+import {
+  ArrowLeft, Eye, Users,
+  Wallet, TrendingUp, ExternalLink
+} from 'lucide-react'
 
-
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-zinc-800 text-zinc-400',
-  pending_payment: 'bg-amber-500/10 text-amber-400',
-  active: 'bg-green-500/10 text-[#00E5A0]',
-  paused: 'bg-orange-500/10 text-orange-400',
-  completed: 'bg-blue-500/10 text-blue-400',
+interface Campaign {
+  id: string
+  title: string
+  description: string
+  brief: string
+  do_list: string[]
+  dont_list: string[]
+  hashtags: string[]
+  budget_total: number
+  budget_remaining: number
+  payout_rate: number
+  per_creator_cap: number
+  target_platforms: string[]
+  status: string
+  start_date: string
+  end_date: string
+  created_at: string
 }
 
-const TASK_STATUS_BADGE: Record<string, string> = {
-  accepted: 'bg-zinc-800 text-zinc-400',
-  submitted: 'bg-amber-500/10 text-amber-400',
-  tracking: 'bg-green-500/10 text-[#00E5A0]',
-  flagged: 'bg-red-500/10 text-red-400',
-  completed: 'bg-blue-500/10 text-blue-400',
-  rejected: 'bg-zinc-800 text-zinc-500',
+interface Task {
+  id: string
+  status: string
+  platform: string
+  post_url: string
+  total_views: number
+  total_earned: number
+  fraud_score: number
+  creator_id: string
 }
 
 export default function CampaignDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const { user, loading: userLoading } = useUser()
+  const params = useParams()
   const router = useRouter()
-  const supabase = useMemo(() => createSupabaseClient(), [])
+  const campaignId = params.id as string
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [toggling, setToggling] = useState(false)
-
-  const fetchData = async () => {
-    if (!user) return
-    setLoading(true)
-    setError(null)
-
-    const { data: profile } = await supabase
-      .from('brand_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (!profile) {
-      setError('Profile not found.')
-      setLoading(false)
-      return
-    }
-
-    const { data: camp, error: campErr } = await supabase
-      .from('campaigns')
-      .select('*')
-      .eq('id', id)
-      .eq('brand_id', profile.id)
-      .single()
-
-    if (campErr || !camp) {
-      setError('Campaign not found.')
-      setLoading(false)
-      return
-    }
-    setCampaign(camp)
-
-    const { data: taskData } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('campaign_id', id)
-
-    setTasks(taskData ?? [])
-    setLoading(false)
-  }
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!userLoading && user) fetchData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, userLoading, id])
+    const fetchData = async () => {
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
 
-  const handleTogglePause = async () => {
-    if (!campaign) return
-    setToggling(true)
-    const newStatus = campaign.status === 'active' ? 'paused' : 'active'
-    const { error } = await supabase
-      .from('campaigns')
-      .update({ status: newStatus })
-      .eq('id', campaign.id)
+        const { data: { session } } =
+          await supabase.auth.getSession()
 
-    if (!error) setCampaign({ ...campaign, status: newStatus })
-    setToggling(false)
+        if (!session) {
+          router.push('/auth/login')
+          return
+        }
+
+        // Fetch campaign
+        const { data: campaignData, error: campaignError } =
+          await supabase
+            .from('campaigns')
+            .select('*')
+            .eq('id', campaignId)
+            .maybeSingle()
+
+        if (campaignError) {
+          console.error('Campaign fetch error:', campaignError)
+          setError('Failed to load campaign: ' + campaignError.message)
+          setLoading(false)
+          return
+        }
+
+        if (!campaignData) {
+          setError('Campaign not found.')
+          setLoading(false)
+          return
+        }
+
+        setCampaign(campaignData)
+
+        // Fetch tasks for this campaign
+        const { data: tasksData, error: tasksError } =
+          await supabase
+            .from('tasks')
+            .select('*')
+            .eq('campaign_id', campaignId)
+            .order('created_at', { ascending: false })
+
+        if (tasksError) {
+          console.error('Tasks fetch error:', tasksError)
+        }
+
+        setTasks(tasksData || [])
+        setLoading(false)
+
+      } catch (err) {
+        console.error('Unexpected error:', err)
+        setError('Something went wrong loading this campaign.')
+        setLoading(false)
+      }
+    }
+
+    if (campaignId) {
+      fetchData()
+    }
+  }, [campaignId])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
-  if (userLoading || loading) {
+  if (error) {
     return (
-      <div className="font-sans animate-pulse">
-        <div className="h-6 w-32 bg-zinc-800/50 rounded mb-6" />
-        <div className="h-10 w-64 bg-zinc-800/50 rounded mb-4" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[1, 2, 3, 4].map((i) => <div key={i} className="h-28 bg-zinc-800/50 rounded" />)}
+      <div className="max-w-5xl mx-auto">
+        <Link href="/brand/campaigns"
+          className="flex items-center gap-2 text-zinc-400 hover:text-white mb-6 text-sm transition-colors">
+          <ArrowLeft size={16} /> Back to Campaigns
+        </Link>
+        <div className="bg-red-950/20 border border-red-800/30 p-8 text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-zinc-400 hover:text-white text-sm"
+          >
+            Try again
+          </button>
         </div>
       </div>
     )
   }
 
-  if (error || !campaign) {
-    return (
-      <div className="font-sans">
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-4">{error ?? 'Not found'}</div>
-        <Link href="/brand/campaigns" className="text-zinc-400 hover:text-white text-sm transition-colors">← Back to Campaigns</Link>
-      </div>
-    )
-  }
+  if (!campaign) return null
 
-  const totalViews = tasks.reduce((s, t) => s + (t.total_views ?? 0), 0)
-  const totalEarned = tasks.reduce((s, t) => s + (t.total_earned ?? 0), 0)
-  const spent = campaign.budget_total - campaign.budget_remaining
-  const pct = campaign.budget_total > 0 ? (spent / campaign.budget_total) * 100 : 0
-  const barColor = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-[#00E5A0]'
-  const days = campaign.start_date && campaign.end_date
-    ? daysBetween(campaign.start_date, campaign.end_date)
-    : null
+  const budgetSpent = campaign.budget_total - campaign.budget_remaining
+  const budgetPercent = (budgetSpent / campaign.budget_total) * 100
+  const totalViews = tasks.reduce((sum, t) => sum + (t.total_views || 0), 0)
+
+  const statusColors: Record<string, string> = {
+    active: 'bg-green-500/10 text-[#00E5A0]',
+    paused: 'bg-orange-500/10 text-orange-400',
+    completed: 'bg-blue-500/10 text-blue-400',
+    draft: 'bg-zinc-800 text-zinc-400',
+    pending_payment: 'bg-amber-500/10 text-amber-400',
+  }
 
   return (
-    <div className="font-sans">
-      {/* Back + Header */}
-      <Link href="/brand/campaigns" className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors mb-4">
-        <ChevronLeft size={16} />
-        Campaigns
-      </Link>
+    <div className="max-w-5xl mx-auto">
 
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="font-syne text-3xl font-extrabold text-white">{campaign.title}</h1>
-          <span className={`text-xs px-2.5 py-1 capitalize ${STATUS_BADGE[campaign.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
-            {campaign.status.replace('_', ' ')}
-          </span>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <Link href="/brand/campaigns"
+            className="flex items-center gap-2 text-zinc-400 hover:text-white mb-4 text-sm transition-colors">
+            <ArrowLeft size={16} /> Back to Campaigns
+          </Link>
+          <h1 className="text-3xl font-black text-white mb-2">
+            {campaign.title}
+          </h1>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs px-2 py-1 ${
+              statusColors[campaign.status] ||
+              'bg-zinc-800 text-zinc-400'
+            }`}>
+              {campaign.status.replace('_', ' ').toUpperCase()}
+            </span>
+            <span className="text-zinc-500 text-sm">
+              Created {new Date(campaign.created_at)
+                .toLocaleDateString('en-LK')}
+            </span>
+          </div>
         </div>
-        {(campaign.status === 'active' || campaign.status === 'paused') && (
-          <button
-            onClick={handleTogglePause}
-            disabled={toggling}
-            className="text-sm border border-zinc-700 text-zinc-300 px-4 py-2 hover:border-zinc-400 hover:text-white transition-all disabled:opacity-60"
-          >
-            {toggling ? 'Updating…' : campaign.status === 'active' ? 'Pause Campaign' : 'Resume Campaign'}
-          </button>
-        )}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total Views', value: formatNumber(totalViews), icon: Eye, color: 'text-[#6C47FF]', bg: 'bg-[#6C47FF]/10' },
-          { label: 'Creators', value: tasks.length, icon: Users, color: 'text-[#6C47FF]', bg: 'bg-[#6C47FF]/10' },
-          { label: 'Budget Used', value: formatLKR(spent), icon: Wallet, color: 'text-[#6C47FF]', bg: 'bg-[#6C47FF]/10' },
-          { label: 'Budget Remaining', value: formatLKR(campaign.budget_remaining), icon: TrendingDown, color: 'text-[#00E5A0]', bg: 'bg-green-500/10' },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className="bg-[#111111] border border-zinc-800 p-5 flex flex-col gap-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-syne text-2xl font-extrabold text-white">{value}</p>
-                <p className="text-xs text-zinc-400 mt-1">{label}</p>
-              </div>
-              <div className={`w-9 h-9 ${bg} flex items-center justify-center shrink-0`}>
-                <Icon size={16} className={color} />
-              </div>
+          {
+            label: 'Total Views',
+            value: totalViews.toLocaleString(),
+            icon: <Eye size={18} />,
+            color: 'text-[#6C47FF]'
+          },
+          {
+            label: 'Creators',
+            value: tasks.length.toString(),
+            icon: <Users size={18} />,
+            color: 'text-[#6C47FF]'
+          },
+          {
+            label: 'Budget Used',
+            value: `LKR ${budgetSpent.toLocaleString()}`,
+            icon: <Wallet size={18} />,
+            color: 'text-[#6C47FF]'
+          },
+          {
+            label: 'Remaining',
+            value: `LKR ${campaign.budget_remaining.toLocaleString()}`,
+            icon: <TrendingUp size={18} />,
+            color: 'text-[#00E5A0]'
+          },
+        ].map((stat, i) => (
+          <div key={i} className="bg-[#111111] border border-zinc-800 p-5">
+            <div className={`mb-3 ${stat.color}`}>
+              {stat.icon}
             </div>
+            <p className="text-2xl font-black text-white mb-1">
+              {stat.value}
+            </p>
+            <p className="text-zinc-500 text-xs">
+              {stat.label}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* Budget progress */}
+      {/* Budget Progress */}
       <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <div className="flex justify-between text-sm mb-2">
+        <div className="flex justify-between text-sm mb-3">
           <span className="text-zinc-400">Budget Progress</span>
-          <span className="text-white font-medium">{pct.toFixed(1)}% used</span>
+          <span className="text-white font-semibold">
+            {budgetPercent.toFixed(1)}% used
+          </span>
         </div>
-        <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
-          <div className={`h-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+        <div className="h-2 bg-zinc-800 w-full">
+          <div
+            className={`h-full transition-all ${
+              budgetPercent > 90 ? 'bg-red-500' :
+              budgetPercent > 70 ? 'bg-amber-500' :
+              'bg-[#00E5A0]'
+            }`}
+            style={{ width: `${Math.min(budgetPercent, 100)}%` }}
+          />
         </div>
         <div className="flex justify-between text-xs text-zinc-500 mt-2">
-          <span>{formatLKR(spent)} spent</span>
-          <span>{formatLKR(campaign.budget_total)} total</span>
+          <span>LKR {budgetSpent.toLocaleString()} spent</span>
+          <span>LKR {campaign.budget_total.toLocaleString()} total</span>
         </div>
       </div>
 
-      {/* Campaign details */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Left: Brief */}
-        <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-5">
-          <h2 className="font-syne font-bold text-white">Campaign Brief</h2>
-          {campaign.brief && (
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Brief</p>
-              <p className="text-sm text-zinc-300 leading-relaxed">{campaign.brief}</p>
-            </div>
-          )}
-          {campaign.do_list && campaign.do_list.length > 0 && (
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Do&apos;s ✓</p>
-              <ul className="flex flex-col gap-1">
-                {campaign.do_list.map((item, i) => (
-                  <li key={i} className="text-sm text-zinc-300 flex items-start gap-2">
-                    <span className="text-[#00E5A0] mt-0.5">·</span>{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {campaign.dont_list && campaign.dont_list.length > 0 && (
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Don&apos;ts ✗</p>
-              <ul className="flex flex-col gap-1">
-                {campaign.dont_list.map((item, i) => (
-                  <li key={i} className="text-sm text-zinc-300 flex items-start gap-2">
-                    <span className="text-red-400 mt-0.5">·</span>{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {campaign.hashtags && campaign.hashtags.length > 0 && (
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Hashtags</p>
-              <div className="flex flex-wrap gap-1.5">
-                {campaign.hashtags.map((h, i) => (
-                  <span key={i} className="text-xs bg-[#6C47FF]/10 text-[#6C47FF] border border-[#6C47FF]/20 px-2 py-0.5">{h}</span>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Campaign Details */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+
+        <div className="bg-[#111111] border border-zinc-800 p-6">
+          <h2 className="text-sm uppercase tracking-wider text-zinc-500 mb-4">Campaign Brief</h2>
+          <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+            {campaign.brief || campaign.description ||
+             'No brief provided.'}
+          </p>
         </div>
 
-        {/* Right: Info */}
-        <div className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-5">
-          <h2 className="font-syne font-bold text-white">Campaign Info</h2>
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Payout Rate</p>
-              <p className="text-sm text-white">{formatLKR(campaign.payout_rate)} per 1,000 views</p>
+        <div className="bg-[#111111] border border-zinc-800 p-6">
+          <h2 className="text-sm uppercase tracking-wider text-zinc-500 mb-4">Details</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Payout rate</span>
+              <span className="text-white">
+                LKR {campaign.payout_rate} / 1K views
+              </span>
             </div>
-            {campaign.start_date && campaign.end_date && (
-              <div>
-                <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Duration</p>
-                <p className="text-sm text-white">{formatDate(campaign.start_date)} → {formatDate(campaign.end_date)}</p>
-                {days !== null && <p className="text-xs text-zinc-500 mt-0.5">{days} days</p>}
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Platforms</p>
-              <div className="flex flex-wrap gap-1.5">
-                {campaign.target_platforms.map((p) => (
-                  <span key={p} className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 capitalize">{p}</span>
-                ))}
-              </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Platforms</span>
+              <span className="text-white">
+                {campaign.target_platforms?.join(', ') || '—'}
+              </span>
             </div>
-            {campaign.per_creator_cap && (
-              <div>
-                <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Per Creator Cap</p>
-                <p className="text-sm text-white">{formatLKR(campaign.per_creator_cap)}</p>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <span className="text-zinc-500">End date</span>
+              <span className="text-white">
+                {campaign.end_date
+                  ? new Date(campaign.end_date)
+                    .toLocaleDateString('en-LK')
+                  : '—'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Per creator cap</span>
+              <span className="text-white">
+                {campaign.per_creator_cap
+                  ? `LKR ${campaign.per_creator_cap.toLocaleString()}`
+                  : 'No cap'}
+              </span>
+            </div>
           </div>
+
+          {/* Hashtags */}
+          {campaign.hashtags?.length > 0 && (
+            <div className="mt-4">
+              <p className="text-zinc-500 text-xs mb-2">
+                Required Hashtags
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {campaign.hashtags.map((tag: string) => (
+                  <span key={tag}
+                    className="bg-zinc-900 border border-zinc-700 px-2 py-1 text-xs text-zinc-300">
+                    #{tag.replace('#', '')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Submissions table */}
-      <div className="bg-[#111111] border border-zinc-800">
-        <div className="px-6 py-4 border-b border-zinc-800 flex items-center gap-3">
-          <h2 className="font-syne font-bold text-white text-lg">Creator Submissions</h2>
-          <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{tasks.length}</span>
-        </div>
+      {/* Submissions Table */}
+      <div className="bg-[#111111] border border-zinc-800 p-6">
+        <h2 className="text-lg font-bold text-white mb-4">
+          Creator Submissions
+          <span className="text-zinc-500 font-normal text-sm ml-2">({tasks.length})</span>
+        </h2>
 
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-            <p className="text-white font-medium mb-2">No submissions yet</p>
-            <p className="text-sm text-zinc-500 max-w-sm">Creators will start posting once they discover your campaign.</p>
+          <div className="text-center py-12">
+            <Users size={48} className="text-zinc-700 mx-auto mb-4" />
+            <p className="text-zinc-400 mb-1">
+              No submissions yet
+            </p>
+            <p className="text-zinc-600 text-sm">
+              Creators will start posting once they
+              discover your campaign.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-800">
-                  {['Creator', 'Platform', 'Views', 'Earned', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="px-6 py-3 text-left text-xs text-zinc-500 uppercase tracking-wider font-medium">{h}</th>
-                  ))}
+                  <th className="text-left py-3 px-4 text-zinc-400 font-medium text-xs uppercase tracking-wider">Platform</th>
+                  <th className="text-left py-3 px-4 text-zinc-400 font-medium text-xs uppercase tracking-wider">Views</th>
+                  <th className="text-left py-3 px-4 text-zinc-400 font-medium text-xs uppercase tracking-wider">Earned</th>
+                  <th className="text-left py-3 px-4 text-zinc-400 font-medium text-xs uppercase tracking-wider">Status</th>
+                  <th className="text-left py-3 px-4 text-zinc-400 font-medium text-xs uppercase tracking-wider">Post</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {tasks.map((t) => (
-                  <tr key={t.id} className="hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4 text-zinc-400 text-xs font-mono">{t.creator_id.slice(0, 8)}…</td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 capitalize">{t.platform}</span>
-                    </td>
-                    <td className="px-6 py-4 text-[#00E5A0] font-medium">{formatNumber(t.total_views ?? 0)}</td>
-                    <td className="px-6 py-4 text-[#00E5A0]">{formatLKR(t.total_earned ?? 0)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`text-xs px-2.5 py-1 capitalize ${TASK_STATUS_BADGE[t.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
-                        {t.status}
+              <tbody>
+                {tasks.map((task) => (
+                  <tr key={task.id}
+                    className="border-b border-zinc-800/50 hover:bg-zinc-900/50">
+                    <td className="py-3 px-4">
+                      <span className="capitalize text-zinc-300">
+                        {task.platform}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {t.post_url && (
-                          <a
-                            href={t.post_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-zinc-300 border border-zinc-700 px-3 py-1.5 hover:border-zinc-400 hover:text-white transition-all"
-                          >
-                            View Post
-                          </a>
-                        )}
-                        {t.status === 'tracking' && (
-                          <button className="text-xs text-red-400 border border-red-500/30 px-3 py-1.5 hover:bg-red-500/10 transition-all">
-                            Flag
-                          </button>
-                        )}
-                      </div>
+                    <td className="py-3 px-4 text-[#00E5A0] font-semibold">
+                      {(task.total_views || 0).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-[#00E5A0]">
+                      LKR {(task.total_earned || 0).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="text-xs px-2 py-1 bg-zinc-800 text-zinc-300 capitalize">
+                        {task.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      {task.post_url ? (
+                        <a href={task.post_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#6C47FF] hover:text-white flex items-center gap-1 transition-colors">
+                          View <ExternalLink size={12} />
+                        </a>
+                      ) : (
+                        <span className="text-zinc-600">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -334,13 +386,6 @@ export default function CampaignDetailPage() {
           </div>
         )}
       </div>
-
-      {/* Total earned */}
-      {tasks.length > 0 && (
-        <div className="mt-4 text-right text-sm text-zinc-500">
-          Total earned by creators: <span className="text-[#00E5A0] font-medium">{formatLKR(totalEarned)}</span>
-        </div>
-      )}
     </div>
   )
 }
