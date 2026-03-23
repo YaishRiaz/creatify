@@ -63,9 +63,9 @@ export default function BrandDashboard() {
         .from('brand_profiles')
         .select('id, company_name, industry')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (profileErr) {
+      if (profileErr || !profile) {
         console.error(profileErr)
         setError('Failed to load profile.')
         setLoading(false)

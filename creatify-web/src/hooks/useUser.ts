@@ -20,7 +20,7 @@ export function useUser() {
           .from('users')
           .select('*')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
         setUser(data || null)
       }
       setLoading(false)
@@ -37,7 +37,7 @@ export function useUser() {
           .from('users')
           .select('*')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
         setUser(data || null)
         setLoading(false)
       })

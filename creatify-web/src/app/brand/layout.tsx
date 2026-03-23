@@ -25,10 +25,14 @@ export default function BrandLayout({
 }) {
   const pathname = usePathname()
   const [ready, setReady] = useState(false)
+  const [initialized, setInitialized] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userName, setUserName] = useState('')
 
   useEffect(() => {
+    if (initialized) return
+    setInitialized(true)
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

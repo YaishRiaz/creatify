@@ -66,7 +66,7 @@ export default function CreatorTasksPage() {
     const fetchData = async () => {
       setLoading(true)
       const { data: prof } = await supabase
-        .from('creator_profiles').select('id').eq('user_id', user.id).single()
+        .from('creator_profiles').select('id').eq('user_id', user.id).maybeSingle()
       if (!prof) { setLoading(false); return }
 
       const { data } = await supabase

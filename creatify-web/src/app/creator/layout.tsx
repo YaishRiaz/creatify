@@ -26,11 +26,15 @@ export default function CreatorLayout({
 }) {
   const pathname = usePathname()
   const [ready, setReady] = useState(false)
+  const [initialized, setInitialized] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [userName, setUserName] = useState('')
   const [walletBalance, setWalletBalance] = useState(0)
 
   useEffect(() => {
+    if (initialized) return
+    setInitialized(true)
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -57,7 +61,7 @@ export default function CreatorLayout({
         .from('creator_profiles')
         .select('wallet_balance')
         .eq('user_id', session.user.id)
-        .single()
+        .maybeSingle()
         .then(({ data }) => {
           if (data?.wallet_balance) {
             setWalletBalance(data.wallet_balance)

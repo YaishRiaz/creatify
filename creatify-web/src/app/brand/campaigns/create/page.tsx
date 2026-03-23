@@ -742,7 +742,7 @@ export default function CreateCampaignPage() {
       .from('brand_profiles')
       .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!profile) {
       setSubmitError('Brand profile not found.')

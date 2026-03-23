@@ -83,10 +83,18 @@ export default function CreatorDashboard() {
     const fetchAll = async () => {
       setLoading(true); setError(null)
 
-      const { data: prof, error: profErr } = await supabase
+      let { data: prof } = await supabase
         .from('creator_profiles').select('id, wallet_balance, total_earned')
-        .eq('user_id', user.id).single()
-      if (profErr || !prof) { setError('Failed to load profile.'); setLoading(false); return }
+        .eq('user_id', user.id).maybeSingle()
+      if (!prof) {
+        const { data: newProf } = await supabase
+          .from('creator_profiles')
+          .insert({ user_id: user.id, platforms: {}, wallet_balance: 0, total_earned: 0, is_suspended: false })
+          .select('id, wallet_balance, total_earned')
+          .single()
+        prof = newProf
+      }
+      if (!prof) { setError('Failed to load profile.'); setLoading(false); return }
       setProfile({ ...prof, wallet_balance: prof.wallet_balance ?? 0, total_earned: prof.total_earned ?? 0 })
 
       // Fetch tasks, active campaign count, and onboarding task in parallel

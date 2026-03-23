@@ -44,7 +44,7 @@ export default function CreatorProfilePage() {
       setLoading(true)
       const { data: prof } = await supabase
         .from('creator_profiles').select('id, nic_number, platforms, is_suspended')
-        .eq('user_id', user.id).single()
+        .eq('user_id', user.id).maybeSingle()
       setProfile(prof as CreatorProfile | null)
       setPlatformHandles(prof?.platforms ?? {})
       setFullName(user.full_name ?? '')
