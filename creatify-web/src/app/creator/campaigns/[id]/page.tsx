@@ -2,11 +2,11 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Clock, Loader2, CheckCircle } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
+import { getBrowserClient } from '@/lib/supabase-browser'
 import { useUser } from '@/hooks/useUser'
 import { useToast } from '@/components/shared/Toast'
 import SubmitURLModal from '@/components/creator/SubmitURLModal'
@@ -34,7 +34,6 @@ export default function CreatorCampaignDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { user, loading: userLoading } = useUser()
-  const supabase = useMemo(() => createSupabaseClient(), [])
   const { toast } = useToast()
 
   const [campaign, setCampaign] = useState<CampaignDetail | null>(null)
@@ -42,6 +41,7 @@ export default function CreatorCampaignDetailPage() {
   const [profileLoaded, setProfileLoaded] = useState(false)
   const [existingTask, setExistingTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [accepting, setAccepting] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState<string>('')
   const [showSubmitModal, setShowSubmitModal] = useState(false)
@@ -53,6 +53,7 @@ export default function CreatorCampaignDetailPage() {
     if (userLoading || !user) return
     const fetchData = async () => {
       setLoading(true)
+      const supabase = getBrowserClient()
 
       const { data: prof } = await supabase
         .from('creator_profiles').select('id').eq('user_id', user.id).maybeSingle()
@@ -62,8 +63,26 @@ export default function CreatorCampaignDetailPage() {
 
       const { data: camp } = await supabase
         .from('campaigns')
-        .select('*, brand:brand_profiles(company_name, logo_url)')
-        .eq('id', id).single()
+        .select(`
+          *,
+          brand:brand_profiles (company_name, logo_url),
+          tasks (id, total_views)
+        `)
+        .eq('id', id)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (!camp) {
+        // Campaign might exist but not be active
+        // Check without status filter using a different message
+        setError('This campaign is not currently available.')
+        setLoading(false)
+        return
+      }
+
+      const campTasks = Array.isArray(camp.tasks) ? camp.tasks : []
+      setCreatorCount(campTasks.length)
+      setTotalViews(campTasks.reduce((sum: number, t: { total_views: number }) => sum + (t.total_views || 0), 0))
       setCampaign(camp as CampaignDetail | null)
       if (camp?.target_platforms?.length > 0) setSelectedPlatform(camp.target_platforms[0])
 
@@ -71,23 +90,15 @@ export default function CreatorCampaignDetailPage() {
         .from('tasks').select('*').eq('campaign_id', id).eq('creator_id', prof.id).maybeSingle()
       setExistingTask(task as Task | null)
 
-      // Fetch campaign activity stats
-      const { data: campaignTasks } = await supabase
-        .from('tasks')
-        .select('id, total_views')
-        .eq('campaign_id', id)
-      setCreatorCount(campaignTasks?.length || 0)
-      setTotalViews(campaignTasks?.reduce((sum, t) => sum + (t.total_views || 0), 0) || 0)
-
       setLoading(false)
     }
     fetchData()
-  }, [user, userLoading, supabase, id])
+  }, [user, userLoading, id])
 
   const handleAccept = async () => {
     if (!campaign || !creatorProfileId || !selectedPlatform) return
     setAccepting(true)
-    const { data, error } = await supabase
+    const { data, error } = await getBrowserClient()
       .from('tasks')
       .insert({
         campaign_id: campaign.id,
@@ -116,7 +127,7 @@ export default function CreatorCampaignDetailPage() {
   if (!campaign) {
     return (
       <div className="font-sans">
-        <p className="text-zinc-400">Campaign not found.</p>
+        <p className="text-zinc-400">{error || 'Campaign not found.'}</p>
         <Link href="/creator/campaigns" className="text-[#6C47FF] text-sm mt-2 inline-block">← Back to Campaigns</Link>
       </div>
     )
