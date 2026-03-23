@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createBrowserClient } from '@supabase/ssr'
+import { getBrowserClient } from '@/lib/supabase-browser'
 import {
   ArrowLeft, Eye, Users,
   Wallet, TrendingUp, ExternalLink
@@ -54,10 +54,7 @@ export default function CampaignDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
+        const supabase = getBrowserClient()
 
         const { data: { session } } =
           await supabase.auth.getSession()
