@@ -1,196 +1,155 @@
 'use client'
-
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Plus, Eye, Users, Wallet } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
-import { useUser } from '@/hooks/useUser'
-import { formatLKR, formatDate } from '@/lib/utils'
-import type { Campaign } from '@/types'
-
-const STATUS_BADGE: Record<string, string> = {
-  draft: 'bg-zinc-800 text-zinc-400',
-  pending_payment: 'bg-amber-500/10 text-amber-400',
-  active: 'bg-green-500/10 text-[#00E5A0]',
-  paused: 'bg-orange-500/10 text-orange-400',
-  completed: 'bg-blue-500/10 text-blue-400',
-}
-
-type CampaignTab = 'all' | 'active' | 'paused' | 'completed' | 'draft'
-
-interface CampaignWithStats extends Campaign {
-  tasks?: { total_views: number; total_earned: number }[]
-}
+import { getBrowserClient } from '@/lib/supabase-browser'
+import { Plus } from 'lucide-react'
 
 export default function BrandCampaignsPage() {
-  const { user, loading: userLoading } = useUser()
-  const router = useRouter()
-  const supabase = useMemo(() => createSupabaseClient(), [])
-
-  const [campaigns, setCampaigns] = useState<CampaignWithStats[]>([])
+  const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<CampaignTab>('all')
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (userLoading || !user) return
-    const fetchData = async () => {
-      setLoading(true)
+    const load = async () => {
+      const supabase = getBrowserClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '/auth/login'; return }
+
       const { data: profile } = await supabase
         .from('brand_profiles')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .maybeSingle()
+
       if (!profile) { setLoading(false); return }
 
-      const { data } = await supabase
+      const { data, error: err } = await supabase
         .from('campaigns')
-        .select('*, tasks:tasks(total_views, total_earned)')
+        .select(`
+          id, title, status, budget_total,
+          budget_remaining, payout_rate,
+          created_at, end_date, target_platforms,
+          tasks (id, total_views, total_earned)
+        `)
         .eq('brand_id', profile.id)
         .order('created_at', { ascending: false })
-        .limit(200)
-      setCampaigns((data as CampaignWithStats[]) ?? [])
+
+      if (err) setError(err.message)
+      else setCampaigns(data || [])
       setLoading(false)
     }
-    fetchData()
-  }, [user, userLoading, supabase])
+    load()
+  }, [])
 
-  const filtered = campaigns.filter((c) => tab === 'all' || c.status === tab)
-
-  const tabs: { key: CampaignTab; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'active', label: 'Active' },
-    { key: 'paused', label: 'Paused' },
-    { key: 'completed', label: 'Completed' },
-    { key: 'draft', label: 'Draft' },
-  ]
-
-  if (userLoading || loading) {
-    return (
-      <div className="font-sans animate-pulse flex flex-col gap-4">
-        <div className="h-10 w-48 bg-zinc-800/50 rounded" />
-        {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-zinc-800/50 rounded" />)}
-      </div>
-    )
+  const statusColors: Record<string, string> = {
+    active: 'bg-green-500/10 text-[#00E5A0]',
+    paused: 'bg-amber-500/10 text-amber-400',
+    completed: 'bg-blue-500/10 text-blue-400',
+    draft: 'bg-zinc-800 text-zinc-400',
+    pending_payment: 'bg-yellow-500/10 text-yellow-400',
   }
 
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-64">
+      <div className="w-8 h-8 border-2 border-[#6C47FF]
+      border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
   return (
-    <div className="font-sans">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-syne text-3xl font-extrabold text-white">Campaigns</h1>
-          <p className="text-zinc-500 text-sm mt-1">{campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''} total</p>
+          <h1 className="text-3xl font-black text-white mb-1">Campaigns</h1>
+          <p className="text-zinc-400">Manage all your UGC campaigns.</p>
         </div>
-        <Link
-          href="/brand/campaigns/create"
-          className="flex items-center gap-2 bg-[#6C47FF] text-white px-4 py-2.5 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
-        >
-          <Plus size={16} />
-          New Campaign
+        <Link href="/brand/campaigns/create"
+          className="flex items-center gap-2 bg-[#6C47FF]
+          text-white px-5 py-3 font-semibold text-sm
+          hover:bg-[#5538ee] transition-colors">
+          <Plus size={16} /> New Campaign
         </Link>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-zinc-800 mb-6">
-        {tabs.map(({ key, label }) => {
-          const count = key === 'all' ? campaigns.length : campaigns.filter((c) => c.status === key).length
-          return (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${
-                tab === key ? 'text-white border-b-2 border-[#6C47FF] -mb-px' : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              {label}
-              {count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-[#6C47FF] text-white' : 'bg-zinc-800 text-zinc-400'}`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      {error && (
+        <div className="bg-red-950/20 border border-red-800/30
+        px-4 py-3 mb-6 text-sm text-red-400">{error}</div>
+      )}
 
-      {filtered.length === 0 ? (
-        <div className="bg-[#111111] border border-zinc-800 p-16 text-center">
-          <p className="text-zinc-500 text-sm mb-4">
-            {tab === 'all' ? "You haven't created any campaigns yet." : `No ${tab} campaigns.`}
-          </p>
-          {tab === 'all' && (
-            <Link
-              href="/brand/campaigns/create"
-              className="inline-flex items-center gap-2 bg-[#6C47FF] text-white px-5 py-2.5 text-sm font-semibold hover:bg-[#5538ee] transition-colors"
-            >
-              <Plus size={16} />
-              Create Your First Campaign
-            </Link>
-          )}
+      {campaigns.length === 0 ? (
+        <div className="bg-[#111111] border border-zinc-800
+        p-16 text-center">
+          <p className="text-zinc-400 mb-4">No campaigns yet.</p>
+          <Link href="/brand/campaigns/create"
+            className="inline-flex items-center gap-2
+            bg-[#6C47FF] text-white px-6 py-3 font-semibold
+            text-sm hover:bg-[#5538ee]">
+            <Plus size={16} /> Create your first campaign
+          </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          {filtered.map((campaign) => {
-            const totalViews = (campaign.tasks ?? []).reduce((s, t) => s + (t.total_views ?? 0), 0)
-            const spent = campaign.budget_total - campaign.budget_remaining
-            const pct = campaign.budget_total > 0 ? (spent / campaign.budget_total) * 100 : 0
-            const barColor = pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-amber-500' : 'bg-[#00E5A0]'
-
+        <div className="grid gap-4">
+          {campaigns.map(c => {
+            const views = c.tasks?.reduce((s: number, t: any) =>
+              s + (t.total_views || 0), 0) || 0
+            const spent = c.budget_total - (c.budget_remaining || 0)
+            const pct = Math.min((spent / c.budget_total) * 100, 100)
             return (
-              <div
-                key={campaign.id}
-                onClick={() => router.push(`/brand/campaigns/${campaign.id}`)}
-                className="bg-[#111111] border border-zinc-800 p-5 cursor-pointer hover:border-zinc-700 transition-colors"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 capitalize ${STATUS_BADGE[campaign.status] ?? 'bg-zinc-800 text-zinc-400'}`}>
-                        {campaign.status.replace('_', ' ')}
-                      </span>
-                      {campaign.target_platforms?.map((p) => (
-                        <span key={p} className="text-xs bg-zinc-800 text-zinc-500 px-2 py-0.5 capitalize">{p}</span>
+              <Link key={c.id} href={`/brand/campaigns/${c.id}`}
+                className="block bg-[#111111] border border-zinc-800
+                p-6 hover:border-zinc-600 transition-colors group">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h2 className="text-white font-bold text-lg
+                    group-hover:text-[#6C47FF] transition-colors mb-1">
+                      {c.title}
+                    </h2>
+                    <div className="flex gap-2">
+                      {c.target_platforms?.map((p: string) => (
+                        <span key={p} className="bg-zinc-900 border
+                        border-zinc-700 px-2 py-0.5 text-xs
+                        text-zinc-400 capitalize">{p}</span>
                       ))}
                     </div>
-                    <h3 className="font-syne font-bold text-white text-lg truncate">{campaign.title}</h3>
-                    <p className="text-sm text-zinc-500 mt-0.5">
-                      {formatLKR(campaign.payout_rate)}/1K views · Created {formatDate(campaign.created_at)}
-                    </p>
-
-                    {/* Budget bar */}
-                    <div className="mt-3">
-                      <div className="flex justify-between text-xs text-zinc-500 mb-1">
-                        <span>{formatLKR(spent)} spent</span>
-                        <span>{formatLKR(campaign.budget_total)} budget</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                        <div className={`h-full ${barColor} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                      </div>
-                    </div>
                   </div>
-
-                  {/* Stats */}
-                  <div className="flex sm:flex-col gap-4 sm:gap-2 shrink-0 sm:items-end">
-                    <div className="flex items-center gap-1.5 text-zinc-400">
-                      <Eye size={13} />
-                      <span className="text-sm text-white font-medium">{totalViews.toLocaleString('en-LK')}</span>
-                      <span className="text-xs">views</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-zinc-400">
-                      <Users size={13} />
-                      <span className="text-sm text-white font-medium">{(campaign.tasks ?? []).length}</span>
-                      <span className="text-xs">creators</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-zinc-400">
-                      <Wallet size={13} />
-                      <span className="text-sm text-[#00E5A0] font-medium">{formatLKR(campaign.budget_remaining)}</span>
-                      <span className="text-xs">left</span>
-                    </div>
+                  <span className={`text-xs px-2 py-1 ${statusColors[c.status] || 'bg-zinc-800 text-zinc-400'}`}>
+                    {c.status?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex gap-6 text-sm mb-4">
+                  <div>
+                    <p className="text-[#00E5A0] font-black text-xl">
+                      {views >= 1000 ? `${(views/1000).toFixed(1)}K` : views}
+                    </p>
+                    <p className="text-zinc-500 text-xs">Views</p>
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-xl">
+                      LKR {spent.toLocaleString()}
+                    </p>
+                    <p className="text-zinc-500 text-xs">Spent</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-300 font-bold text-xl">
+                      LKR {(c.budget_remaining||0).toLocaleString()}
+                    </p>
+                    <p className="text-zinc-500 text-xs">Remaining</p>
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-xl">
+                      {c.tasks?.length || 0}
+                    </p>
+                    <p className="text-zinc-500 text-xs">Creators</p>
                   </div>
                 </div>
-              </div>
+                <div className="h-1.5 bg-zinc-800 w-full">
+                  <div className={`h-full transition-all ${
+                    pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-[#00E5A0]'
+                  }`} style={{ width: `${pct}%` }} />
+                </div>
+              </Link>
             )
           })}
         </div>

@@ -1,215 +1,263 @@
 'use client'
-
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Loader2, X } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
-import { useUser } from '@/hooks/useUser'
-import { useToast } from '@/components/shared/Toast'
+import { useEffect, useState } from 'react'
+import { getBrowserClient } from '@/lib/supabase-browser'
+import { ExternalLink } from 'lucide-react'
 
-
-interface CreatorProfile {
-  id: string
-  nic_number: string | null
-  platforms: Record<string, string>
-  is_suspended: boolean
-}
-
-const PLATFORMS = ['tiktok', 'instagram', 'youtube', 'facebook']
+const PLATFORMS = [
+  { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@username' },
+  { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/username' },
+  { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@channel' },
+  { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/pagename' },
+]
 
 export default function CreatorProfilePage() {
-  const { user, loading: userLoading } = useUser()
-  const supabase = useMemo(() => createSupabaseClient(), [])
-  const { toast } = useToast()
-
-  const [profile, setProfile] = useState<CreatorProfile | null>(null)
   const [loading, setLoading] = useState(true)
-
-  // Account info form
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+  const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
-  const [savingInfo, setSavingInfo] = useState(false)
-
-  // Platforms form
-  const [platformHandles, setPlatformHandles] = useState<Record<string, string>>({})
-  const [savingPlatforms, setSavingPlatforms] = useState(false)
-
-  // Delete modal
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [bankName, setBankName] = useState('')
+  const [bankAccount, setBankAccount] = useState('')
+  const [bankAccountName, setBankAccountName] = useState('')
+  const [platforms, setPlatforms] = useState<Record<string, string>>({
+    tiktok: '', instagram: '', youtube: '', facebook: ''
+  })
 
   useEffect(() => {
-    if (userLoading || !user) return
-    const fetchData = async () => {
-      setLoading(true)
-      const { data: prof } = await supabase
-        .from('creator_profiles').select('id, nic_number, platforms, is_suspended')
-        .eq('user_id', user.id).maybeSingle()
-      setProfile(prof as CreatorProfile | null)
-      setPlatformHandles(prof?.platforms ?? {})
-      setFullName(user.full_name ?? '')
-      setPhone(user.phone ?? '')
+    const load = async () => {
+      const supabase = getBrowserClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '/auth/login'; return }
+
+      setEmail(session.user.email || '')
+      setFullName(session.user.user_metadata?.full_name || '')
+
+      const { data: profile } = await supabase
+        .from('creator_profiles')
+        .select('platforms, phone, bank_name, bank_account, bank_account_name')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      if (profile) {
+        setPlatforms({
+          tiktok: profile.platforms?.tiktok || '',
+          instagram: profile.platforms?.instagram || '',
+          youtube: profile.platforms?.youtube || '',
+          facebook: profile.platforms?.facebook || '',
+        })
+        setPhone(profile.phone || '')
+        setBankName(profile.bank_name || '')
+        setBankAccount(profile.bank_account || '')
+        setBankAccountName(profile.bank_account_name || '')
+      }
       setLoading(false)
     }
-    fetchData()
-  }, [user, userLoading, supabase])
+    load()
+  }, [])
 
-  const handleSaveInfo = async () => {
-    if (!user) return
-    setSavingInfo(true)
-    const { error } = await supabase
-      .from('users').update({ full_name: fullName.trim(), phone: phone.trim() || null }).eq('id', user.id)
-    setSavingInfo(false)
-    if (error) toast('Failed to save changes.', 'error')
-    else toast('Profile updated.', 'success')
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+    const supabase = getBrowserClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+
+    // Update auth metadata
+    await supabase.auth.updateUser({
+      data: { full_name: fullName }
+    })
+
+    // TODO: Run in Supabase if columns missing:
+    // ALTER TABLE creator_profiles
+    //   ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+    // ALTER TABLE creator_profiles
+    //   ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
+    // ALTER TABLE creator_profiles
+    //   ADD COLUMN IF NOT EXISTS bank_account VARCHAR(50);
+    // ALTER TABLE creator_profiles
+    //   ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR(100);
+    // TODO: Run in Supabase to remove NIC column:
+    // ALTER TABLE creator_profiles
+    //   DROP COLUMN IF EXISTS nic_number;
+
+    // Update creator profile
+    const { error: err } = await supabase
+      .from('creator_profiles')
+      .update({
+        platforms,
+        phone,
+        bank_name: bankName,
+        bank_account: bankAccount,
+        bank_account_name: bankAccountName,
+      })
+      .eq('user_id', session.user.id)
+
+    if (err) setError(err.message)
+    else { setSaved(true); setTimeout(() => setSaved(false), 3000) }
+    setSaving(false)
   }
 
-  const handleSavePlatforms = async () => {
-    if (!profile) return
-    setSavingPlatforms(true)
-    const cleaned: Record<string, string> = {}
-    for (const [k, v] of Object.entries(platformHandles)) {
-      if (v.trim()) cleaned[k] = v.trim()
-    }
-    const { error } = await supabase
-      .from('creator_profiles').update({ platforms: cleaned }).eq('id', profile.id)
-    setSavingPlatforms(false)
-    if (error) toast('Failed to save platforms.', 'error')
-    else { setProfile((prev) => prev ? { ...prev, platforms: cleaned } : null); toast('Platforms saved.', 'success') }
-  }
-
-  const maskNIC = (nic: string | null): string => {
-    if (!nic) return '—'
-    if (nic.length === 10) return nic[0] + 'X'.repeat(8) + nic[9]
-    return nic[0] + 'X'.repeat(nic.length - 1)
-  }
-
-  if (loading || userLoading) {
-    return <div className="font-sans animate-pulse flex flex-col gap-6">
-      <div className="h-48 bg-zinc-800/50 rounded" />
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-64">
+      <div className="w-8 h-8 border-2 border-[#6C47FF]
+      border-t-transparent rounded-full animate-spin" />
     </div>
-  }
+  )
 
   return (
-    <div className="font-sans">
-      <h1 className="font-syne text-3xl font-extrabold text-white mb-8">Profile</h1>
-
-      {/* Account info */}
-      <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <h2 className="font-syne font-bold text-white mb-5">Account Info</h2>
-        <div className="flex flex-col gap-4 max-w-md">
-          <div>
-            <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">Full Name</label>
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none px-4 py-3 text-sm text-white rounded-none placeholder:text-zinc-600 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">Email</label>
-            <input
-              value={user?.email ?? ''}
-              disabled
-              className="w-full bg-zinc-800/50 border border-zinc-800 outline-none px-4 py-3 text-sm text-zinc-500 rounded-none cursor-not-allowed"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-1.5">Phone <span className="normal-case text-zinc-600">(optional)</span></label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+94 77 123 4567"
-              className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none px-4 py-3 text-sm text-white rounded-none placeholder:text-zinc-600 transition-colors"
-            />
-          </div>
-          <button
-            onClick={handleSaveInfo}
-            disabled={savingInfo}
-            className="bg-[#6C47FF] text-white px-6 py-3 text-sm font-semibold hover:bg-[#5538ee] transition-colors disabled:opacity-60 flex items-center gap-2 w-fit"
-          >
-            {savingInfo && <Loader2 size={14} className="animate-spin" />}
-            Save Changes
-          </button>
-        </div>
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-white mb-1">Profile</h1>
+        <p className="text-zinc-400">
+          Keep your profile updated to receive payouts.
+        </p>
       </div>
 
-      {/* Social platforms */}
-      <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <h2 className="font-syne font-bold text-white mb-1">Your Connected Platforms</h2>
-        <p className="text-sm text-zinc-500 mb-5">Add your usernames so brands can verify your posts.</p>
-        <div className="flex flex-col gap-3 max-w-md">
-          {PLATFORMS.map((p) => (
-            <div key={p} className="flex items-center gap-3">
-              <span className="text-xs text-zinc-400 capitalize w-20 shrink-0">{p}</span>
-              <input
-                value={platformHandles[p] ?? ''}
-                onChange={(e) => setPlatformHandles((prev) => ({ ...prev, [p]: e.target.value }))}
-                placeholder="@yourusername"
-                className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-[#6C47FF] outline-none px-4 py-2.5 text-sm text-white rounded-none placeholder:text-zinc-600 transition-colors"
-              />
-            </div>
-          ))}
-          <button
-            onClick={handleSavePlatforms}
-            disabled={savingPlatforms}
-            className="bg-[#6C47FF] text-white px-6 py-3 text-sm font-semibold hover:bg-[#5538ee] transition-colors disabled:opacity-60 flex items-center gap-2 w-fit mt-2"
-          >
-            {savingPlatforms && <Loader2 size={14} className="animate-spin" />}
-            Save Platforms
-          </button>
-        </div>
-      </div>
-
-      {/* NIC */}
-      <div className="bg-[#111111] border border-zinc-800 p-6 mb-6">
-        <h2 className="font-syne font-bold text-white mb-3">NIC Number</h2>
-        <div className="flex items-center gap-3">
-          <p className="text-zinc-300 font-mono text-lg">{maskNIC(profile?.nic_number ?? null)}</p>
-          <span className="text-xs bg-green-500/10 text-[#00E5A0] px-2 py-0.5">Verified</span>
-        </div>
-        <p className="text-xs text-zinc-500 mt-2">Contact support to update your NIC.</p>
-      </div>
-
-      {/* Danger zone */}
-      <div className="bg-[#111111] border border-red-500/20 p-6">
-        <h2 className="font-syne font-bold text-red-400 mb-3">Danger Zone</h2>
-        <button
-          onClick={() => setShowDeleteModal(true)}
-          className="text-sm border border-red-500/40 text-red-400 px-5 py-2.5 hover:bg-red-500/10 transition-colors"
-        >
-          Delete Account
-        </button>
-      </div>
-
-      {/* Delete confirmation modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setShowDeleteModal(false)} />
-          <div className="relative bg-[#111111] border border-zinc-800 w-full max-w-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-syne text-lg font-bold text-white">Delete Account</h3>
-              <button onClick={() => setShowDeleteModal(false)} className="text-zinc-500 hover:text-white">
-                <X size={18} />
-              </button>
-            </div>
-            <p className="text-sm text-zinc-400 mb-6">
-              This action cannot be undone. All your tasks, earnings history, and profile data will be permanently deleted.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowDeleteModal(false)} className="flex-1 border border-zinc-700 text-zinc-300 py-3 text-sm hover:border-zinc-500 transition-colors">
-                Cancel
-              </button>
-              <button
-                onClick={() => { toast('Please contact support to delete your account.', 'info'); setShowDeleteModal(false) }}
-                className="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 py-3 text-sm hover:bg-red-500/20 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+      {error && (
+        <div className="bg-red-950/20 border border-red-800/30
+        px-4 py-3 mb-6 text-sm text-red-400">{error}</div>
+      )}
+      {saved && (
+        <div className="bg-green-950/20 border border-green-800/30
+        px-4 py-3 mb-6 text-sm text-[#00E5A0]">
+          Profile saved successfully.
         </div>
       )}
+
+      {/* Personal Info */}
+      <div className="bg-[#111111] border border-zinc-800 p-6 mb-4">
+        <h2 className="text-white font-semibold mb-4">
+          Personal Information
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs uppercase tracking-wider
+            text-zinc-400 mb-2">Full Name</label>
+            <input type="text" value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder="Your full name"
+              className="w-full bg-zinc-900 border border-zinc-800
+              text-white px-4 py-3 text-sm focus:outline-none
+              focus:border-[#6C47FF] transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider
+            text-zinc-400 mb-2">Email</label>
+            <input type="text" value={email} disabled
+              className="w-full bg-zinc-800/50 border border-zinc-800
+              text-zinc-500 px-4 py-3 text-sm cursor-not-allowed" />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider
+            text-zinc-400 mb-2">Phone Number</label>
+            <input type="text" value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="+94 7X XXX XXXX"
+              className="w-full bg-zinc-900 border border-zinc-800
+              text-white px-4 py-3 text-sm focus:outline-none
+              focus:border-[#6C47FF] transition-colors" />
+          </div>
+        </div>
+      </div>
+
+      {/* Social Links */}
+      <div className="bg-[#111111] border border-zinc-800 p-6 mb-4">
+        <h2 className="text-white font-semibold mb-2">
+          Social Media Profiles
+        </h2>
+        <p className="text-zinc-500 text-sm mb-4">
+          Add your public profile links. These help brands
+          discover you and verify your content.
+        </p>
+        <div className="space-y-4">
+          {PLATFORMS.map(p => (
+            <div key={p.key}>
+              <label className="block text-xs uppercase tracking-wider
+              text-zinc-400 mb-2">{p.label}</label>
+              <div className="relative">
+                <input
+                  type="url"
+                  value={platforms[p.key] || ''}
+                  onChange={e => setPlatforms({ ...platforms, [p.key]: e.target.value })}
+                  placeholder={p.placeholder}
+                  className="w-full bg-zinc-900 border border-zinc-800
+                  text-white px-4 py-3 pr-10 text-sm focus:outline-none
+                  focus:border-[#6C47FF] transition-colors" />
+                {platforms[p.key] && (
+                  <a href={platforms[p.key]} target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2
+                    text-zinc-500 hover:text-white transition-colors">
+                    <ExternalLink size={16} />
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bank Details */}
+      <div className="bg-[#111111] border border-zinc-800 p-6 mb-4">
+        <h2 className="text-white font-semibold mb-2">
+          Bank Details for Payouts
+        </h2>
+        <p className="text-zinc-500 text-sm mb-4">
+          Required to receive cashouts. Your bank details
+          are encrypted and only used for payout transfers.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs uppercase tracking-wider
+            text-zinc-400 mb-2">Bank Name</label>
+            <select value={bankName}
+              onChange={e => setBankName(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-800
+              text-white px-4 py-3 text-sm focus:outline-none
+              focus:border-[#6C47FF] appearance-none">
+              <option value="">Select your bank</option>
+              {['Bank of Ceylon', 'Commercial Bank', 'HNB', 'NDB',
+                'Sampath Bank', 'Seylan Bank', 'Nations Trust Bank',
+                'DFCC Bank', 'Pan Asia Bank', 'Hatton National Bank',
+                'Union Bank', 'Cargills Bank', 'Amana Bank',
+                'Standard Chartered', 'HSBC'].map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider
+            text-zinc-400 mb-2">Account Number</label>
+            <input type="text" value={bankAccount}
+              onChange={e => setBankAccount(e.target.value)}
+              placeholder="Your bank account number"
+              className="w-full bg-zinc-900 border border-zinc-800
+              text-white px-4 py-3 text-sm focus:outline-none
+              focus:border-[#6C47FF] transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider
+            text-zinc-400 mb-2">Account Holder Name</label>
+            <input type="text" value={bankAccountName}
+              onChange={e => setBankAccountName(e.target.value)}
+              placeholder="Name on bank account"
+              className="w-full bg-zinc-900 border border-zinc-800
+              text-white px-4 py-3 text-sm focus:outline-none
+              focus:border-[#6C47FF] transition-colors" />
+          </div>
+        </div>
+      </div>
+
+      <button onClick={handleSave} disabled={saving}
+        className="w-full bg-[#6C47FF] text-white py-4
+        font-semibold hover:bg-[#5538ee] transition-colors
+        disabled:opacity-50">
+        {saving ? 'Saving...' : 'Save Profile'}
+      </button>
     </div>
   )
 }

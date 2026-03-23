@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import Navbar from '@/components/shared/Navbar'
 import Footer from '@/components/shared/Footer'
 
@@ -11,7 +9,7 @@ const sections = [
   {
     title: 'Information We Collect',
     content:
-      'We collect information you provide when creating an account (name, email, phone, NIC for creators), social media usernames, and usage data to improve our platform.',
+      'We collect information you provide when creating an account (name, email, phone), social media usernames, and usage data to improve our platform.',
   },
   {
     title: 'How We Use Your Information',
@@ -27,11 +25,6 @@ const sections = [
     title: 'Payment Information',
     content:
       'Bank details provided for cashouts are stored securely and used only for processing your earnings. We never store full card numbers.',
-  },
-  {
-    title: 'NIC Numbers',
-    content:
-      'Creator NIC numbers are collected for identity verification and fraud prevention only. They are never shared with brands or third parties.',
   },
   {
     title: 'Contact Us',
