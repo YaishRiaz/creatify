@@ -72,7 +72,7 @@ function Hero() {
         <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           {[
             { icon: <Zap size={14} />, text: "Real-time earnings" },
-            { icon: <Wallet size={14} />, text: "LKR 500 min cashout" },
+            { icon: <Wallet size={14} />, text: "LKR 5,000 min cashout" },
             {
               icon: <Globe size={14} />,
               text: "TikTok · Instagram · YouTube · Facebook",
@@ -459,7 +459,7 @@ function DualCTAStrip() {
           </h3>
           <p className="text-sm text-zinc-400 leading-relaxed max-w-sm">
             Post what you already post. Just make sure a brand is behind it.
-            Cash out from LKR 500.
+            Cash out from LKR 5,000.
           </p>
           <div>
             <Link

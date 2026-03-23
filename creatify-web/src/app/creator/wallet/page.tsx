@@ -41,7 +41,10 @@ const PAYOUT_STATUS_BADGE: Record<string, string> = {
   failed: 'bg-red-500/10 text-red-400',
 }
 
-const MIN_CASHOUT = 500
+// Minimum cashout is LKR 5,000
+// Changed from LKR 500 on March 2026
+// Bank transfer overhead too high for small amounts
+const MIN_CASHOUT = 5000
 
 export default function CreatorWalletPage() {
   const { user, loading: userLoading } = useUser()
