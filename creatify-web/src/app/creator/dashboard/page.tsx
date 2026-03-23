@@ -2,367 +2,254 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Eye, Zap, CheckCircle, Search } from 'lucide-react'
-import { createSupabaseClient } from '@/lib/supabase'
-import { useUser } from '@/hooks/useUser'
-import { useToast } from '@/components/shared/Toast'
-import SubmitURLModal from '@/components/creator/SubmitURLModal'
-import { formatNumber, formatDate, getGreeting } from '@/lib/utils'
-import { ONBOARDING_CAMPAIGN_ID } from '@/lib/onboarding'
-import type { Task, Campaign } from '@/types'
-
-
-interface CreatorProfile {
-  id: string
-  wallet_balance: number
-  total_earned: number
-}
-
-interface TaskWithCampaign extends Task {
-  campaign: Pick<Campaign, 'id' | 'title' | 'payout_rate' | 'status' | 'brief' | 'hashtags'> & {
-    brand: { company_name: string } | null
-  } | null
-}
-
-interface Snapshot {
-  id: string
-  task_id: string
-  delta_views: number
-  earnings_added: number
-  snapshotted_at: string
-  task: {
-    platform: string
-    post_url: string | null
-    campaign: { title: string } | null
-  } | null
-}
-
-const TASK_STATUS_BADGE: Record<string, string> = {
-  accepted: 'bg-zinc-800 text-zinc-300',
-  submitted: 'bg-blue-500/10 text-blue-400',
-  tracking: 'bg-purple-500/10 text-purple-400',
-  flagged: 'bg-red-500/10 text-red-400',
-  completed: 'bg-green-500/10 text-[#00E5A0]',
-  rejected: 'bg-red-900/20 text-red-500',
-}
-
-const PLATFORM_BADGE: Record<string, string> = {
-  tiktok: 'bg-pink-500/10 text-pink-400',
-  instagram: 'bg-orange-500/10 text-orange-400',
-  youtube: 'bg-red-500/10 text-red-400',
-  facebook: 'bg-blue-500/10 text-blue-400',
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const h = Math.floor(diff / 3600000)
-  if (h < 1) return 'just now'
-  if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`
-  const d = Math.floor(h / 24)
-  return `${d} day${d > 1 ? 's' : ''} ago`
-}
+import { getBrowserClient } from '@/lib/supabase-browser'
+import {
+  Eye, Zap, CheckCircle,
+  Search, Clock
+} from 'lucide-react'
 
 export default function CreatorDashboard() {
-  const { user, loading: userLoading } = useUser()
-  const supabase = useMemo(() => createSupabaseClient(), [])
-  const { toast } = useToast()
-
-  const [profile, setProfile] = useState<CreatorProfile | null>(null)
-  const [tasks, setTasks] = useState<TaskWithCampaign[]>([])
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([])
-  const [activeCampaignCount, setActiveCampaignCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [submitTask, setSubmitTask] = useState<TaskWithCampaign | null>(null)
-  const [onboardingTask, setOnboardingTask] = useState<Task | null | undefined>(undefined)
+  const [error, setError] = useState('')
+  const [userName, setUserName] = useState('')
+  const [walletBalance, setWalletBalance] = useState(0)
+  const [totalEarned, setTotalEarned] = useState(0)
+  const [totalViews, setTotalViews] = useState(0)
+  const [activeTasks, setActiveTasks] = useState(0)
+  const [completedTasks, setCompletedTasks] = useState(0)
+  const [activeCampaignCount, setActiveCampaignCount] = useState(0)
 
   useEffect(() => {
-    if (userLoading || !user) return
-    const fetchAll = async () => {
-      setLoading(true); setError(null)
+    const load = async () => {
+      // Use the singleton client
+      const supabase = getBrowserClient()
 
-      let { data: prof } = await supabase
-        .from('creator_profiles').select('id, wallet_balance, total_earned')
-        .eq('user_id', user.id).maybeSingle()
-      if (!prof) {
-        const { data: newProf } = await supabase
+      // Step 1: Get session
+      const { data: { session }, error: sessionError } =
+        await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        window.location.href = '/auth/login'
+        return
+      }
+
+      const userId = session.user.id
+      setUserName(
+        session.user.user_metadata?.full_name ||
+        session.user.email || 'Creator'
+      )
+
+      // Step 2: Get creator profile
+      // Use maybeSingle to avoid 406 errors
+      const { data: profile, error: profileError } =
+        await supabase
           .from('creator_profiles')
-          .insert({ user_id: user.id, platforms: {}, wallet_balance: 0, total_earned: 0, is_suspended: false })
           .select('id, wallet_balance, total_earned')
-          .single()
-        prof = newProf
-      }
-      if (!prof) { setError('Failed to load profile.'); setLoading(false); return }
-      setProfile({ ...prof, wallet_balance: prof.wallet_balance ?? 0, total_earned: prof.total_earned ?? 0 })
+          .eq('user_id', userId)
+          .maybeSingle()
 
-      // Fetch tasks, active campaign count, and onboarding task in parallel
-      const [
-        { data: taskData, error: taskErr },
-        { count },
-        { data: obTask },
-      ] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select('*, campaign:campaigns(id, title, payout_rate, status, brief, hashtags, brand:brand_profiles(company_name))')
-          .eq('creator_id', prof.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('campaigns')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active')
-          .eq('is_onboarding', false),
-        supabase
-          .from('tasks')
-          .select('id, status, campaign_id, creator_id, platform, post_url, accepted_at, created_at, total_views, total_earned, fraud_score')
-          .eq('campaign_id', ONBOARDING_CAMPAIGN_ID)
-          .eq('creator_id', prof.id)
-          .maybeSingle(),
-      ])
+      if (profileError) {
+        console.error('Profile error:', profileError)
+        // Show error but don't crash
+        setError('Failed to load profile. Error: ' +
+          profileError.message +
+          ' Code: ' + profileError.code)
+        // Continue loading other data
+      } else if (profile) {
+        setWalletBalance(profile.wallet_balance || 0)
+        setTotalEarned(profile.total_earned || 0)
+      } else {
+        // No profile — create one
+        const { error: insertError } = await supabase
+          .from('creator_profiles')
+          .insert({
+            user_id: userId,
+            platforms: {},
+            wallet_balance: 0,
+            total_earned: 0,
+            is_suspended: false,
+          })
 
-      if (taskErr) { setError('Failed to load tasks.'); setLoading(false); return }
-      const typedTasks = (taskData ?? []) as TaskWithCampaign[]
-      setTasks(typedTasks)
-      setActiveCampaignCount(count ?? 0)
-      setOnboardingTask(obTask as Task | null)
-
-      const taskIds = typedTasks.map((t) => t.id)
-      if (taskIds.length > 0) {
-        const { data: snapData } = await supabase
-          .from('view_snapshots')
-          .select('*, task:tasks(platform, post_url, campaign:campaigns(title))')
-          .in('task_id', taskIds)
-          .order('snapshotted_at', { ascending: false })
-          .limit(10)
-        setSnapshots((snapData ?? []) as Snapshot[])
+        if (insertError) {
+          console.error('Insert profile error:', insertError)
+          setError('Profile setup failed: ' + insertError.message)
+        }
       }
 
+      // Step 3: Get tasks
+      if (profile?.id) {
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('id, status, total_views')
+          .eq('creator_id', profile.id)
+
+        if (tasks) {
+          setTotalViews(
+            tasks.reduce((sum, t) => sum + (t.total_views || 0), 0)
+          )
+          setActiveTasks(
+            tasks.filter(t =>
+              ['accepted', 'submitted', 'tracking']
+              .includes(t.status)
+            ).length
+          )
+          setCompletedTasks(
+            tasks.filter(t => t.status === 'completed').length
+          )
+        }
+      }
+
+      // Step 4: Get active campaign count
+      const { count } = await supabase
+        .from('campaigns')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gt('budget_remaining', 0)
+
+      setActiveCampaignCount(count || 0)
       setLoading(false)
     }
-    fetchAll()
-  }, [user, userLoading, supabase])
 
-  if (userLoading || loading) {
+    load()
+  }, [])
+
+  const greeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  if (loading) {
     return (
-      <div className="font-sans animate-pulse flex flex-col gap-6">
-        <div className="h-10 w-64 bg-zinc-800/50 rounded" />
-        <div className="h-40 bg-zinc-800/50 rounded" />
-        <div className="grid grid-cols-3 gap-4">{[1,2,3].map(i => <div key={i} className="h-28 bg-zinc-800/50 rounded" />)}</div>
+      <div className="flex items-center justify-center min-h-64">
+        <div className="w-8 h-8 border-2 border-[#6C47FF] border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
-  const walletBalance = profile?.wallet_balance ?? 0
-  const totalEarned = profile?.total_earned ?? 0
-  const totalViews = tasks.reduce((s, t) => s + (t.total_views ?? 0), 0)
-  const activeTasks = tasks.filter((t) => ['accepted', 'submitted', 'tracking'].includes(t.status))
-  const completedTasks = tasks.filter((t) => t.status === 'completed')
-  const trackingTasks = tasks.filter((t) => ['submitted', 'tracking'].includes(t.status))
-
   return (
-    <div className="font-sans">
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm mb-6">{error}</div>
-      )}
+    <div className="max-w-5xl mx-auto">
 
-      {/* Onboarding banner */}
-      {onboardingTask === null && (
-        <div className="bg-[#6C47FF]/5 border border-[#6C47FF]/40 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1">
-            <p className="font-syne font-bold text-white mb-1">🎬 One task before you start</p>
-            <p className="text-sm text-zinc-400">Post a video about Creatify to unlock all campaigns. Takes 5 minutes.</p>
-          </div>
-          <Link href="/creator/campaigns" className="text-sm bg-[#6C47FF] text-white px-5 py-2.5 hover:bg-[#5538ee] transition-colors shrink-0">
-            Complete Onboarding →
-          </Link>
-        </div>
-      )}
-      {onboardingTask?.status === 'accepted' && (
-        <div className="bg-amber-500/5 border border-amber-500/30 p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1">
-            <p className="font-syne font-bold text-amber-300 mb-1">⚠ Submit your Creatify video URL</p>
-            <p className="text-sm text-zinc-400">You accepted the onboarding task. Post your video then submit the URL to unlock campaigns.</p>
-          </div>
-          <Link href="/creator/campaigns" className="text-sm bg-amber-500 text-black px-5 py-2.5 hover:bg-amber-400 transition-colors shrink-0 font-semibold">
-            Submit URL →
-          </Link>
-        </div>
-      )}
-      {onboardingTask?.status === 'submitted' && (
-        <div className="bg-blue-500/5 border border-blue-500/20 p-5 mb-6 flex items-center gap-4">
-          <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-white">Your Creatify video is under review</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Campaigns will unlock once our team verifies your video (within 24 hours).</p>
-          </div>
+      {/* Error banner - only show if profile failed */}
+      {error && (
+        <div className="bg-red-950/20 border border-red-800/30 px-4 py-3 mb-6 text-sm text-red-400 flex justify-between items-center">
+          <span>{error}</span>
+          <button
+            onClick={() => setError('')}
+            className="text-red-600 hover:text-red-400 ml-4 text-xs">
+            ✕
+          </button>
         </div>
       )}
 
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-syne text-3xl font-extrabold text-white">
-          {getGreeting()}, {user?.full_name}
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-white mb-1">
+          {greeting()}, {userName}
         </h1>
-        <p className="text-zinc-500 text-sm mt-1">Here&apos;s how your content is performing.</p>
+        <p className="text-zinc-400">
+          Here&apos;s how your content is performing.
+        </p>
       </div>
 
-      {/* Wallet hero */}
-      <div className="bg-[#111111] border border-zinc-800 p-6 md:p-8 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      {/* Wallet Hero */}
+      <div className="bg-[#111111] border border-zinc-800 p-8 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2">Available to Cash Out</p>
-          <p className="font-syne text-4xl md:text-5xl font-extrabold text-[#00E5A0] break-all">
-            LKR {walletBalance.toLocaleString('en-LK')}
+          <p className="text-zinc-500 text-xs uppercase tracking-wider mb-2">Available to Cash Out</p>
+          <p className="text-[#00E5A0] font-black text-5xl mb-2">
+            LKR {walletBalance.toLocaleString()}
           </p>
-          {walletBalance >= 500 ? (
-            <Link
-              href="/creator/wallet"
-              className="inline-block mt-4 bg-[#00E5A0] text-black px-6 py-3 text-sm font-semibold hover:bg-[#00c98e] transition-colors"
-            >
+          {walletBalance >= 5000 ? (
+            <Link href="/creator/wallet"
+              className="inline-block bg-[#00E5A0] text-black px-6 py-2 font-semibold text-sm hover:bg-[#00c98e] transition-colors">
               Request Cashout
             </Link>
           ) : (
-            <p className="text-zinc-500 text-sm mt-3">
-              LKR {Math.round((500 - walletBalance) * 100) / 100} more until cashout
+            <p className="text-zinc-500 text-sm">
+              LKR {(5000 - walletBalance).toLocaleString()}
+              {' '}more until cashout
             </p>
           )}
         </div>
-        <div className="text-right md:border-l md:border-zinc-800 md:pl-8">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Lifetime Earned</p>
-          <p className="font-syne text-2xl font-extrabold text-zinc-300">
-            LKR {totalEarned.toLocaleString('en-LK')}
+        <div className="text-right">
+          <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Lifetime Earned</p>
+          <p className="text-white font-black text-3xl">
+            LKR {totalEarned.toLocaleString()}
           </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
-          { icon: Eye, label: 'Total Views Generated', value: formatNumber(totalViews), sub: 'across all posts', color: 'text-[#6C47FF]', bg: 'bg-[#6C47FF]/10' },
-          { icon: Zap, label: 'Active Tasks', value: activeTasks.length, sub: 'currently running', color: 'text-[#6C47FF]', bg: 'bg-[#6C47FF]/10' },
-          { icon: CheckCircle, label: 'Completed', value: completedTasks.length, sub: `${tasks.length} total tasks`, color: 'text-[#00E5A0]', bg: 'bg-green-500/10' },
-        ].map(({ icon: Icon, label, value, sub, color, bg }) => (
-          <div key={label} className="bg-[#111111] border border-zinc-800 p-6 flex flex-col gap-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-syne text-3xl font-extrabold text-white">{value}</p>
-                <p className="text-sm text-zinc-400 mt-1">{label}</p>
-              </div>
-              <div className={`w-10 h-10 ${bg} flex items-center justify-center shrink-0`}>
-                <Icon size={18} className={color} />
-              </div>
+          {
+            label: 'Total Views Generated',
+            value: totalViews >= 1000
+              ? `${(totalViews / 1000).toFixed(1)}K`
+              : totalViews.toString(),
+            sub: 'across all posts',
+            icon: <Eye size={20} />,
+            color: 'text-[#6C47FF]',
+            bg: 'bg-[#6C47FF]/10'
+          },
+          {
+            label: 'Active Tasks',
+            value: activeTasks.toString(),
+            sub: 'currently running',
+            icon: <Zap size={20} />,
+            color: 'text-[#6C47FF]',
+            bg: 'bg-[#6C47FF]/10'
+          },
+          {
+            label: 'Completed',
+            value: completedTasks.toString(),
+            sub: `${activeTasks + completedTasks} total tasks`,
+            icon: <CheckCircle size={20} />,
+            color: 'text-[#00E5A0]',
+            bg: 'bg-[#00E5A0]/10'
+          },
+        ].map((stat, i) => (
+          <div key={i} className="bg-[#111111] border border-zinc-800 p-6">
+            <div className={`w-10 h-10 ${stat.bg} flex items-center justify-center ${stat.color} mb-4`}>
+              {stat.icon}
             </div>
-            <p className="text-xs text-zinc-500">{sub}</p>
+            <p className="text-3xl font-black text-white mb-1">
+              {stat.value}
+            </p>
+            <p className="text-zinc-400 text-sm">
+              {stat.label}
+            </p>
+            <p className="text-zinc-600 text-xs mt-1">
+              {stat.sub}
+            </p>
           </div>
         ))}
       </div>
 
-      {/* Active tasks — tracking/submitted only */}
-      {trackingTasks.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="font-syne font-bold text-white text-lg">Currently Tracking</h2>
-            <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{trackingTasks.length}</span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {trackingTasks.map((t) => (
-              <div key={t.id} className="bg-[#111111] border border-zinc-800 p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-white truncate">{t.campaign?.title ?? 'Campaign'}</p>
-                  <p className="text-sm text-zinc-400">{t.campaign?.brand?.company_name ?? ''}</p>
-                  <span className={`inline-block text-xs px-2 py-0.5 mt-1 capitalize ${PLATFORM_BADGE[t.platform] ?? 'bg-zinc-800 text-zinc-400'}`}>{t.platform}</span>
-                </div>
-                <div className="text-center">
-                  <p className="font-syne text-2xl font-extrabold text-[#00E5A0]">{formatNumber(t.total_views ?? 0)}</p>
-                  <p className="text-xs text-zinc-500">views</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-syne text-xl font-extrabold text-[#00E5A0]">LKR {(t.total_earned ?? 0).toLocaleString('en-LK')}</p>
-                  <p className="text-xs text-zinc-500 mb-1">earned</p>
-                  <span className={`text-xs px-2 py-0.5 capitalize ${TASK_STATUS_BADGE[t.status] ?? 'bg-zinc-800 text-zinc-400'}`}>{t.status}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Accepted but no URL submitted */}
-      {tasks.filter((t) => t.status === 'accepted').map((t) => (
-        <div key={t.id} className="bg-amber-500/5 border border-amber-500/20 p-4 mb-3 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-300">⚠ You accepted this task but haven&apos;t submitted your post URL yet.</p>
-            <p className="text-xs text-zinc-400 mt-0.5">{t.campaign?.title}</p>
-          </div>
-          <button
-            onClick={() => setSubmitTask(t)}
-            className="text-sm bg-[#6C47FF] text-white px-4 py-2 hover:bg-[#5538ee] transition-colors shrink-0"
-          >
-            Submit URL →
-          </button>
-        </div>
-      ))}
-
       {/* Discovery prompt */}
-      {activeTasks.length < 3 && (
-        <div className="bg-[#6C47FF]/5 border border-[#6C47FF]/20 p-6 flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-          <Search size={24} className="text-[#6C47FF] shrink-0" />
-          <div className="flex-1">
-            <p className="font-semibold text-white">{activeCampaignCount} campaigns are live right now</p>
-            <p className="text-sm text-zinc-400 mt-0.5">Start earning by picking up a new task</p>
+      <div className="bg-[#6C47FF]/5 border border-[#6C47FF]/20 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Search size={24} className="text-[#6C47FF] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-white font-semibold">
+              {activeCampaignCount} campaign
+              {activeCampaignCount !== 1 ? 's' : ''}
+              {' '}live right now
+            </p>
+            <p className="text-zinc-400 text-sm">
+              Start earning by picking up a new task
+            </p>
           </div>
-          <Link
-            href="/creator/campaigns"
-            className="text-sm bg-[#6C47FF] text-white px-5 py-2.5 hover:bg-[#5538ee] transition-colors shrink-0"
-          >
-            Browse Campaigns →
-          </Link>
         </div>
-      )}
-
-      {/* Recent earnings feed */}
-      <div>
-        <h2 className="font-syne font-bold text-white text-lg mb-4">Recent Earnings</h2>
-        {snapshots.length === 0 ? (
-          <div className="bg-[#111111] border border-zinc-800 p-8 text-center">
-            <p className="text-zinc-500 text-sm">Your earnings will appear here as views come in.</p>
-          </div>
-        ) : (
-          <div className="bg-[#111111] border border-zinc-800 divide-y divide-zinc-800/50">
-            {snapshots.map((s) => (
-              <div key={s.id} className="px-5 py-4 flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`text-xs px-2 py-0.5 capitalize ${PLATFORM_BADGE[s.task?.platform ?? ''] ?? 'bg-zinc-800 text-zinc-400'}`}>
-                      {s.task?.platform}
-                    </span>
-                    <span className="text-sm text-zinc-300 truncate">{s.task?.campaign?.title}</span>
-                  </div>
-                  <p className="text-xs text-zinc-500">{timeAgo(s.snapshotted_at)}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm text-zinc-300">+{formatNumber(s.delta_views)} views</p>
-                  <p className="text-sm font-semibold text-[#00E5A0]">+LKR {(s.earnings_added ?? 0).toLocaleString('en-LK')}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <Link href="/creator/campaigns"
+          className="bg-[#6C47FF] text-white px-6 py-3 font-semibold text-sm hover:bg-[#5538ee] transition-colors whitespace-nowrap flex-shrink-0">
+          Browse Campaigns →
+        </Link>
       </div>
 
-      {/* Submit URL Modal */}
-      {submitTask && submitTask.campaign && (
-        <SubmitURLModal
-          isOpen={true}
-          onClose={() => setSubmitTask(null)}
-          task={submitTask}
-          campaign={submitTask.campaign}
-          onSuccess={(updated) => {
-            setTasks((prev) => prev.map((t) => t.id === updated.id ? { ...t, ...updated } : t))
-            setSubmitTask(null)
-          }}
-        />
-      )}
     </div>
   )
 }

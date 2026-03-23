@@ -1,625 +1,303 @@
-## CHANGE 1 — Minimum Cashout: LKR 500 → LKR 5,000
+The creator dashboard is getting 403 on creator_profiles
+because one of the multiple Supabase client instances
+doesn't have the auth session attached.
 
-Find and replace ALL instances of the number 500 
-that relate to minimum cashout across the codebase.
+Find src/app/creator/dashboard/page.tsx
 
-Files to update:
+The page is likely creating its own Supabase client
+separately from the layout. This creates a second
+instance without the session.
 
-src/app/creator/wallet/page.tsx
-- Change minimum cashout check from 500 to 5000
-- Update the progress bar calculation to use 5000 as target
-- Update the UI text: "LKR 5,000 minimum cashout"
-- Update: "LKR {5000 - balance} more to unlock cashout"
+Replace the ENTIRE creator dashboard data fetching
+with this pattern that explicitly gets the session
+first and uses the same client instance:
 
-src/app/creator/campaigns/[id]/page.tsx
-- Update any mention of "LKR 500 min cashout"
+'use client'
 
-src/app/page.tsx (landing page)
-- Find the stat pill: "LKR 500 minimum cashout"
-- Change to: "LKR 5,000 minimum cashout"
+export const dynamic = 'force-dynamic'
 
-src/app/brand/campaigns/create/page.tsx
-- Update the default min_cashout value from 500 to 5000
-- Update helper text
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { getBrowserClient } from '@/lib/supabase-browser'
+import { 
+  Eye, Zap, CheckCircle, 
+  Search, Clock 
+} from 'lucide-react'
 
-Database default:
-In the campaigns table the min_cashout column 
-defaults to 500. We will update this via the 
-create campaign form sending 5000 as default.
+export default function CreatorDashboard() {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [userName, setUserName] = useState('')
+  const [walletBalance, setWalletBalance] = useState(0)
+  const [totalEarned, setTotalEarned] = useState(0)
+  const [totalViews, setTotalViews] = useState(0)
+  const [activeTasks, setActiveTasks] = useState(0)
+  const [completedTasks, setCompletedTasks] = useState(0)
+  const [activeCampaignCount, setActiveCampaignCount] = useState(0)
 
-Also update the database:
-Add a comment in the code explaining:
-// Minimum cashout is LKR 5,000
-// Changed from LKR 500 on March 2026
-// Bank transfer overhead too high for small amounts
+  useEffect(() => {
+    const load = async () => {
+      // Use the singleton client
+      const supabase = getBrowserClient()
 
----
+      // Step 1: Get session
+      const { data: { session }, error: sessionError } = 
+        await supabase.auth.getSession()
 
-## CHANGE 2 — Per-Creator Cap Logic
+      if (sessionError || !session) {
+        window.location.href = '/auth/login'
+        return
+      }
 
-Currently brands can always set a per-creator cap.
-New rule: per-creator cap is ONLY available when 
-campaign budget >= LKR 50,000.
-Below LKR 50,000, one creator can earn the 
-full budget if they perform well enough.
+      const userId = session.user.id
+      setUserName(
+        session.user.user_metadata?.full_name || 
+        session.user.email || 'Creator'
+      )
 
-Update src/app/brand/campaigns/create/page.tsx
-Step 3 (Budget & Payout):
+      // Step 2: Get creator profile
+      // Use maybeSingle to avoid 406 errors
+      const { data: profile, error: profileError } = 
+        await supabase
+          .from('creator_profiles')
+          .select('id, wallet_balance, total_earned')
+          .eq('user_id', userId)
+          .maybeSingle()
 
-Find the per-creator cap section and wrap it 
-with this conditional logic:
+      if (profileError) {
+        console.error('Profile error:', profileError)
+        // Show error but don't crash
+        setError('Failed to load profile. Error: ' + 
+          profileError.message + 
+          ' Code: ' + profileError.code)
+        // Continue loading other data
+      } else if (profile) {
+        setWalletBalance(profile.wallet_balance || 0)
+        setTotalEarned(profile.total_earned || 0)
+      } else {
+        // No profile — create one
+        const { error: insertError } = await supabase
+          .from('creator_profiles')
+          .insert({
+            user_id: userId,
+            platforms: {},
+            wallet_balance: 0,
+            total_earned: 0,
+            is_suspended: false,
+          })
+        
+        if (insertError) {
+          console.error('Insert profile error:', insertError)
+          setError('Profile setup failed: ' + insertError.message)
+        }
+      }
 
-const showPerCreatorCap = watchedBudget >= 50000
+      // Step 3: Get tasks
+      if (profile?.id) {
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('id, status, total_views')
+          .eq('creator_id', profile.id)
 
-{showPerCreatorCap ? (
-  // Show the per-creator cap toggle and input
-  <div className="mt-6">
-    <div className="flex items-center justify-between 
-    mb-3">
-      <div>
-        <label className="text-white font-semibold">
-          Per-Creator Earning Limit
-        </label>
-        <p className="text-zinc-500 text-sm mt-1">
-          Cap the maximum any single creator can earn. 
-          Distributes budget across more creators.
-        </p>
+        if (tasks) {
+          setTotalViews(
+            tasks.reduce((sum, t) => sum + (t.total_views || 0), 0)
+          )
+          setActiveTasks(
+            tasks.filter(t => 
+              ['accepted','submitted','tracking']
+              .includes(t.status)
+            ).length
+          )
+          setCompletedTasks(
+            tasks.filter(t => t.status === 'completed').length
+          )
+        }
+      }
+
+      // Step 4: Get active campaign count
+      const { count } = await supabase
+        .from('campaigns')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gt('budget_remaining', 0)
+
+      setActiveCampaignCount(count || 0)
+      setLoading(false)
+    }
+
+    load()
+  }, [])
+
+  const greeting = () => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center 
+      min-h-64">
+        <div className="w-8 h-8 border-2 border-[#6C47FF] 
+        border-t-transparent rounded-full animate-spin" />
       </div>
-      <input 
-        type="checkbox"
-        checked={usePerCreatorCap}
-        onChange={e => setUsePerCreatorCap(e.target.checked)}
-        className="w-5 h-5"
-      />
-    </div>
-    {usePerCreatorCap && (
-      <input
-        type="number"
-        placeholder="e.g. 5000"
-        min={500}
-        {...register('per_creator_cap')}
-        className="w-full bg-zinc-900 border 
-        border-zinc-800 text-white px-4 py-3 
-        rounded-none focus:border-[#6C47FF]"
-      />
-    )}
-  </div>
-) : (
-  // Show explanation for small budgets
-  <div className="mt-6 bg-[#6C47FF]/5 border 
-  border-[#6C47FF]/20 p-4">
-    <p className="text-zinc-300 text-sm">
-      <span className="text-[#6C47FF] font-semibold">
-        No per-creator limit
-      </span>
-      {' '}— For campaigns under LKR 50,000, 
-      a single high-performing creator can earn 
-      the full budget. This rewards the best 
-      content without artificial limits.
-    </p>
-    <p className="text-zinc-500 text-xs mt-2">
-      Per-creator caps are available for campaigns 
-      with a budget of LKR 50,000 or more.
-    </p>
-  </div>
-)}
-
-When budget is below 50,000, set per_creator_cap 
-to null when submitting the form.
-
-Also update the budget breakdown display to show:
-- If budget < 50,000: "One creator can earn up to 
-  LKR {budget * 0.85} if they hit enough views"
-- If budget >= 50,000 and cap set: "Max per creator: 
-  LKR {per_creator_cap}"
-
----
-
-## CHANGE 3 — Campaign Progress Bar on Creator Browse Page
-
-Update src/app/creator/campaigns/page.tsx
-
-For each campaign card add a progress section 
-showing campaign activity:
-
-First update the campaigns fetch to include 
-task count and total views:
-
-const { data: campaigns } = await supabase
-  .from('campaigns')
-  .select(`
-    *,
-    brand:brand_profiles(company_name, logo_url),
-    tasks:tasks(id, total_views, total_earned)
-  `)
-  .eq('status', 'active')
-  .gt('budget_remaining', 0)
-  .order('created_at', { ascending: false })
-
-Then in each campaign card, after the payout 
-rate display, add this progress section:
-
-{/* Campaign Activity */}
-{(() => {
-  const taskList = campaign.tasks || []
-  const creatorCount = taskList.length
-  const totalViews = taskList.reduce(
-    (sum: number, t: any) => sum + (t.total_views || 0), 0
-  )
-  const budgetUsed = campaign.budget_total - 
-    campaign.budget_remaining
-  const budgetPercent = Math.min(
-    (budgetUsed / campaign.budget_total) * 100, 
-    100
-  )
-  const budgetRemaining = campaign.budget_remaining
+    )
+  }
 
   return (
-    <div className="mt-4 space-y-3">
-      
-      {/* Budget progress bar */}
-      <div>
-        <div className="flex justify-between 
-        text-xs mb-1.5">
-          <span className="text-zinc-500">
-            Budget remaining
-          </span>
-          <span className={
-            budgetPercent > 80 
-              ? 'text-red-400' 
-              : budgetPercent > 50 
-              ? 'text-amber-400' 
-              : 'text-[#00E5A0]'
-          }>
-            LKR {budgetRemaining.toLocaleString()} left
-          </span>
+    <div className="max-w-5xl mx-auto">
+
+      {/* Error banner - only show if profile failed */}
+      {error && (
+        <div className="bg-red-950/20 border 
+        border-red-800/30 px-4 py-3 mb-6 text-sm 
+        text-red-400 flex justify-between items-center">
+          <span>{error}</span>
+          <button 
+            onClick={() => setError('')}
+            className="text-red-600 hover:text-red-400 
+            ml-4 text-xs">
+            ✕
+          </button>
         </div>
-        <div className="h-1.5 bg-zinc-800 w-full">
-          <div
-            className={`h-full transition-all ${
-              budgetPercent > 80 
-                ? 'bg-red-500' 
-                : budgetPercent > 50 
-                ? 'bg-amber-500' 
-                : 'bg-[#00E5A0]'
-            }`}
-            style={{ 
-              width: `${100 - budgetPercent}%` 
-            }}
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Activity stats */}
-      <div className="flex items-center gap-4 
-      text-xs text-zinc-500">
-        <span className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full 
-          bg-[#6C47FF]" />
-          {creatorCount} creator{creatorCount !== 1 ? 's' : ''} 
-          posting
-        </span>
-        {totalViews > 0 && (
-          <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full 
-            bg-[#00E5A0]" />
-            {totalViews >= 1000 
-              ? `${(totalViews/1000).toFixed(1)}K` 
-              : totalViews} views delivered
-          </span>
-        )}
-        {budgetPercent > 75 && (
-          <span className="text-amber-400 font-medium">
-            Filling up fast
-          </span>
-        )}
-      </div>
-    </div>
-  )
-})()}
-
-Also add urgency indicators to campaign cards:
-- If budget remaining < 20%: show 
-  "⚡ Almost full" badge in red top-right of card
-- If campaign ends within 3 days: show 
-  "⏰ Ending soon" badge in amber
-- If 0 creators: show 
-  "🆕 Be the first" badge in purple
-
-Add these badge checks at the top of each card:
-const budgetPercent = 
-  ((campaign.budget_total - campaign.budget_remaining) / 
-   campaign.budget_total) * 100
-const daysLeft = Math.ceil(
-  (new Date(campaign.end_date).getTime() - Date.now()) / 
-  (1000 * 60 * 60 * 24)
-)
-const creatorCount = campaign.tasks?.length || 0
-
-const urgencyBadge = 
-  budgetPercent > 80 ? { 
-    text: '⚡ Almost full', 
-    class: 'bg-red-500/10 text-red-400' 
-  } :
-  daysLeft <= 3 ? { 
-    text: `⏰ ${daysLeft}d left`, 
-    class: 'bg-amber-500/10 text-amber-400' 
-  } :
-  creatorCount === 0 ? { 
-    text: '🆕 Be first', 
-    class: 'bg-[#6C47FF]/10 text-[#6C47FF]' 
-  } : null
-
-Display urgencyBadge in the top-right corner 
-of each campaign card.
-
----
-
-## CHANGE 4 — Experience Campaigns (Physical Products)
-
-Add a new campaign type for restaurants, 
-clothing stores, salons etc.
-
-STEP 4A — Add campaign_type to campaigns table
-
-Run this SQL comment in the code 
-(we'll add via form, not alter table yet):
-// campaign_type: 'digital' | 'experience'
-// experience campaigns require physical visit
-
-Update src/app/brand/campaigns/create/page.tsx
-Step 1 — Campaign Basics:
-
-Add campaign type selector BEFORE the title field:
-
-const [campaignType, setCampaignType] = useState
-  'digital' | 'experience'
->('digital')
-
-{/* Campaign Type */}
-<div className="mb-8">
-  <label className="block text-sm uppercase 
-  tracking-wider text-zinc-400 mb-4">
-    Campaign Type
-  </label>
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    
-    {/* Digital */}
-    <button
-      type="button"
-      onClick={() => setCampaignType('digital')}
-      className={`p-6 border text-left transition-colors ${
-        campaignType === 'digital'
-          ? 'border-[#6C47FF] bg-[#6C47FF]/5'
-          : 'border-zinc-800 bg-[#111111] hover:border-zinc-600'
-      }`}
-    >
-      <div className="text-2xl mb-3">📱</div>
-      <h3 className="text-white font-bold mb-1">
-        Digital Campaign
-      </h3>
-      <p className="text-zinc-400 text-sm">
-        Creators post from home. Works for apps, 
-        online stores, delivery, services, 
-        and anything digital.
-      </p>
-      <ul className="mt-3 space-y-1">
-        {[
-          'Creator uses or reviews your product',
-          'Posts from anywhere',
-          'Pay per view delivered',
-        ].map(point => (
-          <li key={point} 
-            className="text-xs text-zinc-500 
-            flex items-center gap-2">
-            <span className="text-[#00E5A0]">✓</span>
-            {point}
-          </li>
-        ))}
-      </ul>
-    </button>
-
-    {/* Experience */}
-    <button
-      type="button"
-      onClick={() => setCampaignType('experience')}
-      className={`p-6 border text-left transition-colors ${
-        campaignType === 'experience'
-          ? 'border-[#00E5A0] bg-[#00E5A0]/5'
-          : 'border-zinc-800 bg-[#111111] hover:border-zinc-600'
-      }`}
-    >
-      <div className="text-2xl mb-3">🍽️</div>
-      <h3 className="text-white font-bold mb-1">
-        Experience Campaign
-      </h3>
-      <p className="text-zinc-400 text-sm">
-        For restaurants, clothing stores, salons, 
-        gyms and any business requiring 
-        physical presence.
-      </p>
-      <ul className="mt-3 space-y-1">
-        {[
-          'Creator visits your location',
-          'Submit receipt for reimbursement',
-          'Earn cashback if views target is hit',
-        ].map(point => (
-          <li key={point} 
-            className="text-xs text-zinc-500 
-            flex items-center gap-2">
-            <span className="text-[#00E5A0]">✓</span>
-            {point}
-          </li>
-        ))}
-      </ul>
-      <div className="mt-3 bg-[#00E5A0]/5 border 
-      border-[#00E5A0]/20 px-3 py-2">
-        <p className="text-[#00E5A0] text-xs font-semibold">
-          Coming soon — in beta
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-white mb-1">
+          {greeting()}, {userName}
+        </h1>
+        <p className="text-zinc-400">
+          Here's how your content is performing.
         </p>
       </div>
-    </button>
-  </div>
-</div>
 
-When experience type is selected, show 
-additional fields in Step 3 (Budget):
-
-{campaignType === 'experience' && (
-  <div className="mt-6 space-y-4 bg-zinc-900/50 
-  border border-zinc-800 p-6">
-    <h3 className="text-white font-semibold">
-      Experience Settings
-    </h3>
-    
-    {/* Receipt reimbursement cap */}
-    <div>
-      <label className="block text-xs uppercase 
-      tracking-wider text-zinc-400 mb-2">
-        Max Receipt Reimbursement per Creator (LKR)
-      </label>
-      <input
-        type="number"
-        placeholder="e.g. 1500"
-        className="w-full bg-zinc-900 border 
-        border-zinc-800 text-white px-4 py-3 
-        rounded-none focus:border-[#6C47FF]"
-      />
-      <p className="text-zinc-500 text-xs mt-2">
-        Creators submit their receipt. If they hit 
-        the minimum views, they get reimbursed up 
-        to this amount.
-      </p>
-    </div>
-
-    {/* Minimum views for reimbursement */}
-    <div>
-      <label className="block text-xs uppercase 
-      tracking-wider text-zinc-400 mb-2">
-        Minimum Views to Unlock Reimbursement
-      </label>
-      <input
-        type="number"
-        placeholder="e.g. 5000"
-        className="w-full bg-zinc-900 border 
-        border-zinc-800 text-white px-4 py-3 
-        rounded-none focus:border-[#6C47FF]"
-      />
-      <p className="text-zinc-500 text-xs mt-2">
-        Creator must hit this view count within 
-        7 days of posting to receive reimbursement.
-      </p>
-    </div>
-
-    {/* Travel allowance */}
-    <div>
-      <label className="block text-xs uppercase 
-      tracking-wider text-zinc-400 mb-2">
-        Travel Allowance per Creator — Optional (LKR)
-      </label>
-      <input
-        type="number"
-        placeholder="e.g. 300 (leave empty for none)"
-        className="w-full bg-zinc-900 border 
-        border-zinc-800 text-white px-4 py-3 
-        rounded-none focus:border-[#6C47FF]"
-      />
-      <p className="text-zinc-500 text-xs mt-2">
-        Optional flat amount paid to any creator 
-        who submits verified content, regardless 
-        of views. Covers travel costs.
-      </p>
-    </div>
-
-    {/* How it works summary */}
-    <div className="bg-[#111111] border 
-    border-zinc-700 p-4 mt-4">
-      <p className="text-zinc-400 text-xs 
-      font-semibold uppercase tracking-wider mb-3">
-        How creators get paid
-      </p>
-      <div className="space-y-2 text-xs text-zinc-400">
-        <div className="flex items-start gap-2">
-          <span className="text-[#6C47FF] mt-0.5">1.</span>
-          Creator visits your location and 
-          makes a purchase
+      {/* Wallet Hero */}
+      <div className="bg-[#111111] border border-zinc-800 
+      p-8 mb-6 flex flex-col md:flex-row 
+      items-start md:items-center justify-between gap-6">
+        <div>
+          <p className="text-zinc-500 text-xs uppercase 
+          tracking-wider mb-2">Available to Cash Out</p>
+          <p className="text-[#00E5A0] font-black text-5xl 
+          mb-2">
+            LKR {walletBalance.toLocaleString()}
+          </p>
+          {walletBalance >= 5000 ? (
+            <Link href="/creator/wallet"
+              className="inline-block bg-[#00E5A0] 
+              text-black px-6 py-2 font-semibold 
+              text-sm hover:bg-[#00c98e] transition-colors">
+              Request Cashout
+            </Link>
+          ) : (
+            <p className="text-zinc-500 text-sm">
+              LKR {(5000 - walletBalance).toLocaleString()} 
+              {' '}more until cashout
+            </p>
+          )}
         </div>
-        <div className="flex items-start gap-2">
-          <span className="text-[#6C47FF] mt-0.5">2.</span>
-          They post content and submit their 
-          receipt + post URL on Creatify
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="text-[#6C47FF] mt-0.5">3.</span>
-          Travel allowance (if set) credited 
-          to wallet immediately
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="text-[#6C47FF] mt-0.5">4.</span>
-          Per-view earnings accumulate as 
-          views come in
-        </div>
-        <div className="flex items-start gap-2">
-          <span className="text-[#00E5A0] mt-0.5">5.</span>
-          If they hit minimum views within 7 days 
-          → receipt amount reimbursed (up to cap)
+        <div className="text-right">
+          <p className="text-zinc-500 text-xs uppercase 
+          tracking-wider mb-1">Lifetime Earned</p>
+          <p className="text-white font-black text-3xl">
+            LKR {totalEarned.toLocaleString()}
+          </p>
         </div>
       </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 
+      gap-4 mb-6">
+        {[
+          { 
+            label: 'Total Views Generated', 
+            value: totalViews >= 1000 
+              ? `${(totalViews/1000).toFixed(1)}K` 
+              : totalViews.toString(),
+            sub: 'across all posts',
+            icon: <Eye size={20} />,
+            color: 'text-[#6C47FF]',
+            bg: 'bg-[#6C47FF]/10'
+          },
+          { 
+            label: 'Active Tasks', 
+            value: activeTasks.toString(),
+            sub: 'currently running',
+            icon: <Zap size={20} />,
+            color: 'text-[#6C47FF]',
+            bg: 'bg-[#6C47FF]/10'
+          },
+          { 
+            label: 'Completed', 
+            value: completedTasks.toString(),
+            sub: `${activeTasks + completedTasks} total tasks`,
+            icon: <CheckCircle size={20} />,
+            color: 'text-[#00E5A0]',
+            bg: 'bg-[#00E5A0]/10'
+          },
+        ].map((stat, i) => (
+          <div key={i} className="bg-[#111111] 
+          border border-zinc-800 p-6">
+            <div className={`w-10 h-10 ${stat.bg} 
+            flex items-center justify-center 
+            ${stat.color} mb-4`}>
+              {stat.icon}
+            </div>
+            <p className="text-3xl font-black text-white mb-1">
+              {stat.value}
+            </p>
+            <p className="text-zinc-400 text-sm">
+              {stat.label}
+            </p>
+            <p className="text-zinc-600 text-xs mt-1">
+              {stat.sub}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Discovery prompt */}
+      <div className="bg-[#6C47FF]/5 border 
+      border-[#6C47FF]/20 p-6 flex flex-col 
+      md:flex-row items-start md:items-center 
+      justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Search size={24} className="text-[#6C47FF] 
+          flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-white font-semibold">
+              {activeCampaignCount} campaign
+              {activeCampaignCount !== 1 ? 's' : ''} 
+              {' '}live right now
+            </p>
+            <p className="text-zinc-400 text-sm">
+              Start earning by picking up a new task
+            </p>
+          </div>
+        </div>
+        <Link href="/creator/campaigns"
+          className="bg-[#6C47FF] text-white px-6 py-3 
+          font-semibold text-sm hover:bg-[#5538ee] 
+          transition-colors whitespace-nowrap flex-shrink-0">
+          Browse Campaigns →
+        </Link>
+      </div>
+
     </div>
-  </div>
-)}
+  )
+}
 
-Note: Store campaign_type, experience_reimbursement_cap,
-experience_min_views, travel_allowance in the 
-campaigns description field as JSON for now 
-until we add proper columns:
-
-const experienceData = campaignType === 'experience' ? {
-  type: 'experience',
-  reimbursement_cap: reimbursementCap,
-  min_views_for_reimbursement: minViewsForReimbursement,
-  travel_allowance: travelAllowance,
-} : { type: 'digital' }
-
-// Store in description as:
-// [CAMPAIGN_META]${JSON.stringify(experienceData)}
-
----
-
-## CHANGE 5 — Update Campaign Detail Page for Creators
-
-Update src/app/creator/campaigns/[id]/page.tsx
-
-Show the progress bar and activity stats 
-on the campaign detail page too.
-
-After the platform badges and before the 
-earnings calculator, add:
-
-{/* Campaign Activity Bar */}
-<div className="bg-[#111111] border border-zinc-800 
-p-6 mt-6">
-  <h3 className="text-xs uppercase tracking-wider 
-  text-zinc-500 mb-4">Campaign Activity</h3>
-  
-  <div className="grid grid-cols-3 gap-4 mb-4">
-    <div className="text-center">
-      <p className="text-2xl font-black text-white">
-        {creatorCount}
-      </p>
-      <p className="text-xs text-zinc-500 mt-1">
-        Creators posting
-      </p>
-    </div>
-    <div className="text-center">
-      <p className="text-2xl font-black 
-      text-[#00E5A0]">
-        {totalViews >= 1000 
-          ? `${(totalViews/1000).toFixed(1)}K`
-          : totalViews}
-      </p>
-      <p className="text-xs text-zinc-500 mt-1">
-        Views delivered
-      </p>
-    </div>
-    <div className="text-center">
-      <p className="text-2xl font-black text-white">
-        {daysLeft}d
-      </p>
-      <p className="text-xs text-zinc-500 mt-1">
-        Days remaining
-      </p>
-    </div>
-  </div>
-
-  {/* Budget remaining bar */}
-  <div>
-    <div className="flex justify-between text-xs mb-2">
-      <span className="text-zinc-500">
-        Budget remaining
-      </span>
-      <span className="text-white font-semibold">
-        LKR {campaign.budget_remaining?.toLocaleString()}
-      </span>
-    </div>
-    <div className="h-2 bg-zinc-800 w-full">
-      <div
-        className="h-full bg-[#00E5A0] transition-all"
-        style={{ 
-          width: `${(campaign.budget_remaining / 
-            campaign.budget_total) * 100}%` 
-        }}
-      />
-    </div>
-    <p className="text-zinc-600 text-xs mt-1">
-      of LKR {campaign.budget_total?.toLocaleString()} total
-    </p>
-  </div>
-</div>
-
-Fetch task data for this campaign to calculate 
-creatorCount and totalViews:
-
-const { data: campaignTasks } = await supabase
-  .from('tasks')
-  .select('id, total_views')
-  .eq('campaign_id', campaign.id)
-
-const creatorCount = campaignTasks?.length || 0
-const totalViews = campaignTasks?.reduce(
-  (sum, t) => sum + (t.total_views || 0), 0
-) || 0
-const daysLeft = Math.max(0, Math.ceil(
-  (new Date(campaign.end_date).getTime() - Date.now()) / 
-  (1000 * 60 * 60 * 24)
-))
-
----
-
-## CHANGE 6 — Update Landing Page Text
-
-Update src/app/page.tsx:
-
-Find the stat pill "LKR 500 minimum cashout"
-Replace with "LKR 5,000 minimum cashout"
-
-Find any mention of "LKR 500" in the context 
-of cashout and update to "LKR 5,000"
-
-Find "Cash out from LKR 500" in the dual CTA 
-strip and update to "Cash out from LKR 5,000"
-
----
-
-## CHANGE 7 — Update Campaigns Table Schema
-
-Run this SQL to add campaign_type support properly.
-Add these comments to the create campaign 
-form submit handler:
-
-// TODO: Run this SQL in Supabase to add proper columns:
-// ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS 
-//   campaign_type VARCHAR(20) DEFAULT 'digital';
-// ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS 
-//   experience_reimbursement_cap DECIMAL(10,2);
-// ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS 
-//   experience_min_views BIGINT;
-// ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS 
-//   travel_allowance DECIMAL(10,2);
-
-For now store experience data in description 
-field with a JSON prefix as described above.
-
----
-
-## FINAL STEP — Run and commit
-
+After updating run:
 npm run build
-Fix all TypeScript errors.
+Fix any errors.
 
+Commit:
 cd /d/creatify
 git add .
-git commit -m "feat: per-creator cap rules, progress bars, experience campaigns, 5000 min cashout"
+git commit -m "fix: creator dashboard rewrite with proper auth and error handling"
 git push origin develop
 git checkout main
 git merge develop
